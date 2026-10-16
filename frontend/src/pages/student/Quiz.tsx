@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Brain,
   Shield,
+  Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -31,6 +32,11 @@ export default function StudentQuiz() {
   const [answer, setAnswer] = useState("");
   const [explanation, setExplanation] = useState("");
   const [confidence, setConfidence] = useState<Confidence | "">("");
+
+  // Timing & Riddle 2 state
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [ranOutOfTime, setRanOutOfTime] = useState(false);
 
   // Submitting response
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +62,17 @@ export default function StudentQuiz() {
 
       if (data.pending_follow_ups && data.pending_follow_ups.length > 0) {
         const first = data.pending_follow_ups[0];
+        // Riddle 2: if a reply was saved earlier but processing did not complete, resume it
+        if (first.reply_saved) {
+          try {
+            await api.resumeFollowUp(token, first.follow_up_id);
+            const refreshed = await api.me(token);
+            setInfo(refreshed);
+            return;
+          } catch {
+            // Fall through to display pending follow-up if resume call fails
+          }
+        }
         setActiveFollowUp({
           follow_up_id: first.follow_up_id,
           question_text: first.question_text,
@@ -77,6 +94,92 @@ export default function StudentQuiz() {
     const answeredSet = new Set(info.answered_question_ids);
     return info.quiz.questions.find((q) => !answeredSet.has(q.question_id)) || null;
   })();
+
+  // Timer setup when question changes
+  useEffect(() => {
+    if (!currentQuestion) return;
+    setElapsedSeconds(0);
+    setRanOutOfTime(false);
+    if (
+      typeof currentQuestion.time_limit_seconds === "number" &&
+      currentQuestion.time_limit_seconds > 0
+    ) {
+      setTimeLeft(currentQuestion.time_limit_seconds);
+    } else {
+      setTimeLeft(null);
+    }
+  }, [currentQuestion?.question_id]);
+
+  // Elapsed tracker & Countdown tick
+  useEffect(() => {
+    if (!currentQuestion || activeFollowUp || submitting) return;
+
+    const interval = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+      setTimeLeft((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentQuestion?.question_id, activeFollowUp, submitting]);
+
+  // Auto-submit when countdown hits zero
+  useEffect(() => {
+    if (timeLeft === 0 && currentQuestion && !submitting && !activeFollowUp) {
+      handleAutoTimeoutSubmit();
+    }
+  }, [timeLeft]);
+
+  async function handleAutoTimeoutSubmit() {
+    if (!token || !currentQuestion || submitting) return;
+    setSubmitting(true);
+    setError(null);
+
+    const finalAnswer = answer.trim() || "-";
+    const finalExplanation = explanation.trim() || "(Time limit reached)";
+    const finalConfidence = (confidence || "unsure") as Confidence;
+
+    try {
+      const res = await api.submit(token, {
+        question_id: currentQuestion.question_id,
+        answer: finalAnswer,
+        explanation: finalExplanation,
+        self_confidence: finalConfidence,
+        time_spent_seconds: currentQuestion.time_limit_seconds || elapsedSeconds,
+        timed_out: true,
+        ran_out_of_time: true,
+      });
+
+      setAnswer("");
+      setExplanation("");
+      setConfidence("");
+      setRanOutOfTime(false);
+
+      if (res.follow_up) {
+        setActiveFollowUp(res.follow_up);
+      } else {
+        const updated = await api.me(token);
+        setInfo(updated);
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 409) {
+        await loadMe();
+      } else {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Time expired, but submission encountered an error. Please try again."
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const isCompleted =
     info &&
@@ -107,11 +210,15 @@ export default function StudentQuiz() {
         answer: answer.trim(),
         explanation: explanation.trim(),
         self_confidence: confidence as Confidence,
+        time_spent_seconds: elapsedSeconds,
+        timed_out: false,
+        ran_out_of_time: ranOutOfTime,
       });
 
       setAnswer("");
       setExplanation("");
       setConfidence("");
+      setRanOutOfTime(false);
 
       if (res.follow_up) {
         setActiveFollowUp(res.follow_up);
@@ -337,13 +444,31 @@ export default function StudentQuiz() {
 
             {/* Question Card & Form */}
             <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 shadow-2xl space-y-5">
-              <div>
-                <span className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider block mb-1">
-                  Question {currentQuestion.position}
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-white font-heading leading-snug">
-                  {currentQuestion.prompt}
-                </h3>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                    Question {currentQuestion.position}
+                  </span>
+                  <h3 className="text-base sm:text-lg font-bold text-white font-heading leading-snug">
+                    {currentQuestion.prompt}
+                  </h3>
+                </div>
+
+                {timeLeft !== null && (
+                  <div
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all ${
+                      timeLeft <= 30
+                        ? "border-amber-500/60 bg-amber-950/40 text-amber-300 animate-pulse"
+                        : "border-white/20 bg-zinc-900 text-zinc-200"
+                    }`}
+                    title="Time limit for this question"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>
+                      {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleSubmitResponse} id="student-quiz-form" className="space-y-5">
@@ -437,6 +562,26 @@ export default function StudentQuiz() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Out of Time Fact (Riddle 2) */}
+                <div className="pt-2">
+                  <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-zinc-950/60 hover:border-white/25 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={ranOutOfTime}
+                      onChange={(e) => setRanOutOfTime(e.target.checked)}
+                      className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-white accent-white cursor-pointer"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-xs font-semibold text-zinc-200 block">
+                        I ran out of time on this question
+                      </span>
+                      <span className="text-[11px] text-zinc-400 block">
+                        Lets your teacher know that time pressure affected your thinking.
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </form>
             </div>

@@ -107,4 +107,12 @@ export const api = {
       { student: token },
       45000
     ),
+  resumeFollowUp: (token: string, followUpId: number) =>
+    request<{ status: "done" }>(
+      "POST",
+      `/follow-ups/${followUpId}/resume`,
+      undefined,
+      { student: token },
+      45000
+    ),
 };

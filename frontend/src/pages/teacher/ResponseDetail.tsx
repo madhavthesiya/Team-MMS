@@ -202,6 +202,50 @@ export default function ResponseDetail() {
               </div>
             </div>
 
+            {/* Recorded Timing Facts (Riddle 2 Invariant: fact, never inferred) */}
+            <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                  Recorded Timing Facts
+                </span>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase">
+                  Facts only • Never inferred
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-1 text-xs">
+                <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-white/5">
+                  <span className="text-[10px] text-zinc-500 block font-mono">Time Spent</span>
+                  <span className="font-mono font-bold text-white text-sm">
+                    {detail.time_spent_seconds != null ? `${detail.time_spent_seconds}s` : "—"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-white/5">
+                  <span className="text-[10px] text-zinc-500 block font-mono">Auto Timed Out</span>
+                  <span
+                    className={`font-mono font-bold text-sm ${
+                      detail.timed_out ? "text-amber-400" : "text-zinc-300"
+                    }`}
+                  >
+                    {detail.timed_out ? "Yes (0:00)" : "No"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-white/5">
+                  <span className="text-[10px] text-zinc-500 block font-mono">Student Flag</span>
+                  <span
+                    className={`font-mono font-bold text-sm ${
+                      detail.ran_out_of_time ? "text-amber-400" : "text-zinc-300"
+                    }`}
+                  >
+                    {detail.ran_out_of_time ? "Out of time" : "Normal pace"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Written Explanation */}
             <div>
               <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 flex items-center gap-1.5 mb-2">
@@ -241,22 +285,48 @@ export default function ResponseDetail() {
               </div>
             </div>
 
-            {/* Hypotheses Breakdown */}
+            {/* Hypotheses / Stories Considered Breakdown (Riddle 2) */}
             {diagnosis.hypotheses && diagnosis.hypotheses.length > 0 && (
               <div className="space-y-3">
-                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-                  Hypotheses Evaluated by AI Guardrails
-                </span>
-                <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+                    Stories Considered ({diagnosis.hypotheses.length} weighed)
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase">
+                    Riddle 2 • One Error, Several Stories
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
                   {diagnosis.hypotheses.map((hyp, hIdx) => {
                     const pct = Math.round(hyp.likelihood * 100);
+                    const isSupported = hyp.status === "supported";
+                    const isRuledOut = hyp.status === "ruled_out";
+
                     return (
                       <div
                         key={hIdx}
-                        className="p-3.5 rounded-xl border border-white/10 bg-black/50 space-y-2"
+                        className={`p-4 rounded-xl border space-y-2.5 transition-all ${
+                          isSupported
+                            ? "border-white/30 bg-white/[0.04] shadow-md shadow-white/5"
+                            : isRuledOut
+                            ? "border-zinc-800/80 bg-zinc-950/40 opacity-70"
+                            : "border-white/10 bg-black/50"
+                        }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${
+                                isSupported
+                                  ? "bg-white text-black"
+                                  : isRuledOut
+                                  ? "bg-zinc-800 text-zinc-400"
+                                  : "bg-amber-950 text-amber-300 border border-amber-600/40"
+                              }`}
+                            >
+                              {isSupported ? "Chosen Story" : isRuledOut ? "Ruled Out" : "Still Possible"}
+                            </span>
                             <span className="text-xs font-bold text-white capitalize font-mono">
                               {hyp.kind}
                             </span>
@@ -272,19 +342,37 @@ export default function ResponseDetail() {
                         {/* Likelihood progress bar */}
                         <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-white rounded-full transition-all"
+                            className={`h-full rounded-full transition-all ${
+                              isSupported ? "bg-white" : isRuledOut ? "bg-zinc-700" : "bg-zinc-400"
+                            }`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
 
                         {hyp.evidence_for && (
-                          <p className="text-[11px] text-zinc-300">
-                            <strong className="text-white font-mono">Evidence For:</strong> "{hyp.evidence_for}"
+                          <p className="text-[11px] text-zinc-300 leading-relaxed">
+                            <strong className="text-white font-mono uppercase text-[10px] mr-1.5">
+                              Evidence For:
+                            </strong>
+                            "{hyp.evidence_for}"
                           </p>
                         )}
+
                         {hyp.evidence_against && (
-                          <p className="text-[11px] text-zinc-400">
-                            <strong className="text-zinc-500 font-mono">Evidence Against:</strong> "{hyp.evidence_against}"
+                          <p className="text-[11px] text-zinc-400 leading-relaxed">
+                            <strong className="text-zinc-500 font-mono uppercase text-[10px] mr-1.5">
+                              Evidence Against:
+                            </strong>
+                            "{hyp.evidence_against}"
+                          </p>
+                        )}
+
+                        {hyp.would_confirm && (
+                          <p className="text-[11px] text-amber-200/90 leading-relaxed bg-amber-950/20 p-2 rounded-lg border border-amber-800/30">
+                            <strong className="text-amber-300 font-mono uppercase text-[10px] mr-1.5">
+                              What would confirm it:
+                            </strong>
+                            "{hyp.would_confirm}"
                           </p>
                         )}
                       </div>
@@ -420,11 +508,12 @@ export default function ResponseDetail() {
                 className="w-full rounded-xl border border-white/15 bg-zinc-950 px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-white focus:ring-1 focus:ring-white/20"
               >
                 <option value="understood">Understood</option>
-                <option value="misread">Misread the question</option>
-                <option value="misconception">Misconception</option>
+                <option value="misread">Missed a condition in the question</option>
+                <option value="misconception">Mistaken rule (misconception)</option>
                 <option value="guessed">Likely guessed</option>
                 <option value="slip">Careless slip</option>
-                <option value="not_sure">Not sure yet</option>
+                <option value="out_of_time">Ran out of time</option>
+                <option value="not_sure">Several stories — not chosen yet</option>
               </select>
             </div>
 

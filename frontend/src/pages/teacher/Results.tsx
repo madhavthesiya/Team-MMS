@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTeacherToken } from "../../lib/useTeacherToken";
 import { api } from "../../api/client";
 import type { Results as ResultsType } from "../../api/types";
+import { labelText } from "../../lib/labels";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
 import { Banner } from "../../components/Banner";
@@ -288,6 +289,90 @@ export default function Results() {
                     </div>
                   )}
                 </div>
+
+                {/* Riddle 2: Same Wrong Answer, Several Stories */}
+                {activeQ.wrong_answers && activeQ.wrong_answers.length > 0 && (
+                  <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/15 space-y-4 shadow-xl">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-white/10 text-white">
+                          <Sparkles className="w-4 h-4 text-white" />
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-bold font-heading text-white">
+                            Same Wrong Answer — Several Stories (Riddle 2)
+                          </h3>
+                          <p className="text-xs text-zinc-400">
+                            Students submitted the identical error, but their diagnostic stories diverged.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-300">
+                        {activeQ.wrong_answers.length} wrong answer cluster{activeQ.wrong_answers.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      {activeQ.wrong_answers.map((wa, waIdx) => (
+                        <div
+                          key={waIdx}
+                          className="p-4 rounded-xl bg-black/60 border border-white/10 space-y-3.5"
+                        >
+                          {/* Headline: N students answered "..." — for M different stories */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-white font-mono bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-700">
+                                Answer: "{wa.answer}"
+                              </span>
+                              <span className="text-xs text-zinc-300 font-medium">
+                                <strong className="text-white">{wa.count}</strong> student{wa.count === 1 ? "" : "s"} answered this
+                                {wa.stories.length > 1 && (
+                                  <> — for <strong className="text-white">{wa.stories.length}</strong> different stories</>
+                                )}
+                              </span>
+                            </div>
+
+                            {wa.several_stories && (
+                              <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-950/60 border border-amber-600/40 text-amber-300">
+                                Divergent Stories
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Story Breakdown Pills */}
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {wa.stories.map((story, sIdx) => (
+                              <div
+                                key={sIdx}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-900/90 border border-zinc-700 text-xs"
+                              >
+                                <span className="font-mono font-bold text-white">{story.count}×</span>
+                                <span className="text-zinc-300">
+                                  {labelText(story.label, story.misconception_label)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Student links */}
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
+                            <span className="text-[11px] font-mono uppercase text-zinc-500">Students:</span>
+                            {wa.students.map((st) => (
+                              <Link
+                                key={st.response_id}
+                                to={`/teacher/${classId}/responses/${st.response_id}#${token}`}
+                                className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-xs text-zinc-300 hover:text-white transition-all font-mono"
+                              >
+                                <span>{st.nickname}</span>
+                                <ChevronRight className="w-3 h-3 text-zinc-500 group-hover:text-white transition-transform" />
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Correct vs Incorrect Split Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

@@ -1,6 +1,6 @@
 export type AnswerType = "number" | "text" | "choice";
 export type Confidence = "sure" | "unsure" | "guessed";
-export type Label = "understood" | "misread" | "misconception" | "guessed" | "slip" | "not_sure";
+export type Label = "understood" | "misread" | "misconception" | "guessed" | "slip" | "out_of_time" | "not_sure";
 export type HypothesisKind = Exclude<Label, "not_sure">;
 export type Source = "rule" | "ai" | "both" | "teacher";
 export type Status = "open" | "settled" | "not_sure";
@@ -27,6 +27,7 @@ export interface QuestionIn {
   key_idea: string;
   choices: string[];
   misconceptions: MisconceptionIn[];
+  time_limit_seconds?: number | null;
 }
 
 export interface QuizIn {
@@ -43,6 +44,7 @@ export interface Question extends Omit<QuestionIn, "misconceptions"> {
   question_id: number;
   position: number;
   misconceptions: Misconception[];
+  time_limit_seconds?: number | null;
 }
 
 export interface Quiz {
@@ -67,6 +69,7 @@ export interface StudentQuestion {
   prompt: string;
   answer_type: AnswerType;
   choices: string[];
+  time_limit_seconds?: number | null;
 }
 
 export interface StudentQuiz {
@@ -79,6 +82,7 @@ export interface PendingFollowUp {
   follow_up_id: number;
   question_id: number;
   question_text: string;
+  reply_saved?: boolean;
 }
 
 export interface StudentInfo {
@@ -97,8 +101,11 @@ export interface JoinResult extends StudentInfo {
 export interface ResponseIn {
   question_id: number;
   answer: string;
-  explanation: string;
+  explanation?: string;
   self_confidence: Confidence;
+  time_spent_seconds?: number | null;
+  timed_out?: boolean;
+  ran_out_of_time?: boolean;
 }
 
 export interface FollowUp {
@@ -128,6 +135,20 @@ export interface LabelGroup {
   students: StudentEntry[];
 }
 
+export interface StoryCount {
+  label: Label;
+  misconception_label: string | null;
+  count: number;
+}
+
+export interface WrongAnswerGroup {
+  answer: string;
+  count: number;
+  several_stories: boolean;
+  stories: StoryCount[];
+  students: StudentEntry[];
+}
+
 export interface CorrectnessGroup {
   is_correct: boolean;
   count: number;
@@ -141,7 +162,9 @@ export interface QuestionResults {
   correct_answer: string;
   total_responses: number;
   same_score_different_reasons: boolean;
+  same_wrong_answer_different_stories: boolean;
   groups: CorrectnessGroup[];
+  wrong_answers: WrongAnswerGroup[];
 }
 
 export interface Results {
@@ -159,6 +182,7 @@ export interface Hypothesis {
   evidence_against: string;
   likelihood: number;
   status: HypStatus;
+  would_confirm: string;
 }
 
 export interface DiagnosisView {
@@ -209,6 +233,9 @@ export interface ResponseDetail {
   explanation: string;
   self_confidence: Confidence;
   is_correct: boolean;
+  time_spent_seconds: number | null;
+  timed_out: boolean;
+  ran_out_of_time: boolean;
   created_at: string;
   diagnosis: DiagnosisView;
   history: HistoryEntry[];
