@@ -37,26 +37,19 @@ export default function QuizBuilder() {
   const navigate = useNavigate();
   const { classId, token, error: tokenError } = useTeacherToken();
 
-  const [topic, setTopic] = useState("Mathematics");
-  const [title, setTitle] = useState("Diagnostic Quiz");
+  const [topic, setTopic] = useState("");
+  const [title, setTitle] = useState("");
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [mobileTab, setMobileTab] = useState<"list" | "edit">("edit");
 
   const [questions, setQuestions] = useState<QuestionFormState[]>([
     {
-      prompt: "What is 1/2 + 1/4?",
-      correct_answer: "3/4",
+      prompt: "",
+      correct_answer: "",
       answer_type: "number",
-      key_idea: "Find a common denominator: 1/2 = 2/4, so 2/4 + 1/4 = 3/4.",
+      key_idea: "",
       choices: [],
-      misconceptions: [
-        {
-          label: "Adds tops and bottoms",
-          triggersText: "2/6",
-          signal_text: "Adds numerators and denominators separately",
-          remedy_hint: "Use fraction strips to show why denominators must be equal first",
-        },
-      ],
+      misconceptions: [],
     },
   ]);
 
