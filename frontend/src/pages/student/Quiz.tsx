@@ -326,7 +326,7 @@ export default function StudentQuiz() {
   }
 
   return (
-    <div className="h-full flex-1 min-h-0 min-w-0 flex flex-col justify-between max-w-6xl mx-auto w-full px-4 sm:px-6 py-4 overflow-hidden">
+    <div className="h-full flex-1 min-h-0 min-w-0 flex flex-col justify-between w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-4 overflow-hidden">
       {/* Google Classroom-Inspired Assignment Top Bar */}
       <div className="shrink-0 flex items-center justify-between pb-3 border-b border-white/10 gap-3">
         <div className="min-w-0">

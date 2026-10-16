@@ -65,8 +65,8 @@ export default function CreateClass() {
   }
 
   return (
-    <div className="h-full flex-1 min-h-0 w-full overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col justify-between">
-      <div className="max-w-6xl w-full mx-auto space-y-6">
+    <div className="h-full flex-1 min-h-0 w-full overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 flex flex-col justify-between">
+      <div className="w-full space-y-6">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link

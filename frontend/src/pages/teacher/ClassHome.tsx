@@ -146,8 +146,8 @@ export default function ClassHome() {
       />
 
       {/* Main Workspace Area (Independently Scrollable Container) */}
-      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
+        <div className="w-full space-y-6">
           {/* Google Classroom Signature Hero Banner */}
           <div className="relative rounded-2xl overflow-hidden border border-white/15 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 p-6 sm:p-8 shadow-2xl">
             {/* Subtle mathematical graph overlay pattern */}

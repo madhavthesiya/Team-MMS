@@ -78,10 +78,10 @@ export function Layout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      {/* Dynamic Floating CardNav Header */}
-      <header className="shrink-0 z-40 px-3 sm:px-6 pt-2 pb-1.5 w-full">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex-1">
+      {/* Google Classroom Full-Width Navigation Header */}
+      <header className="shrink-0 z-40 px-4 sm:px-6 lg:px-8 py-2 w-full border-b border-white/[0.08] bg-black/90 backdrop-blur-md">
+        <div className="w-full flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <CardNav
               linkComponent={Link}
               theme="dark"
@@ -105,12 +105,12 @@ export function Layout({ children }: { children: ReactNode }) {
                 href: "/join",
               }}
               items={navItems}
-              maxWidth={860}
+              maxWidth={1800}
             />
           </div>
 
           {/* Minimalist API Status Badge */}
-          <div className="hidden lg:flex items-center gap-2 text-[11px] text-zinc-400 font-mono bg-zinc-950/80 backdrop-blur-md border border-white/[0.08] px-3 py-2 rounded-2xl h-[46px] shadow-lg shrink-0">
+          <div className="hidden lg:flex items-center gap-2 text-[11px] text-zinc-400 font-mono bg-zinc-950/80 backdrop-blur-md border border-white/[0.08] px-3.5 py-2 rounded-2xl h-[46px] shadow-lg shrink-0">
             <span
               className={`w-2 h-2 rounded-full ${
                 healthy === true
@@ -129,8 +129,8 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Main Workspace - Adaptive Viewport Layout */}
       {isLanding ? (
-        <div className="relative z-10 flex-1 min-h-0 min-w-0 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col">
-          <main className="max-w-6xl w-full mx-auto flex-1">
+        <div className="relative z-10 flex-1 min-h-0 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 flex flex-col">
+          <main className="w-full max-w-[1600px] mx-auto flex-1">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -145,7 +145,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </main>
 
           {/* Landing Footer */}
-          <footer className="border-t border-white/[0.08] bg-black/90 py-6 mt-12 max-w-6xl w-full mx-auto">
+          <footer className="border-t border-white/[0.08] bg-black/90 py-6 mt-12 w-full max-w-[1600px] mx-auto">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-zinc-300 font-heading">BehindTheMark</span>

@@ -83,7 +83,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="space-y-12 sm:space-y-16 py-4 sm:py-8 max-w-5xl mx-auto">
+    <div className="space-y-12 sm:space-y-16 py-4 sm:py-8 w-full max-w-[1560px] mx-auto">
       {/* Hero Section with Interactive ParticleText */}
       <section className="text-center space-y-4">
         <motion.div
