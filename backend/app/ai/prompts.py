@@ -126,23 +126,38 @@ def build_intervention_prompt(
     misconception_label: str | None,
     signal_text: str | None,
     remedy_hint: str | None,
+    is_correct: bool = False,
 ) -> str:
-    return f"""You are an expert pedagogical coach helping a teacher design a targeted, 2-minute 1-on-1 desk intervention for a student.
+    ans_clean = _clean(student_answer)
+    expl_clean = _clean(student_explanation) or "(none)"
+    fu_clean = _clean(follow_up_reply) if follow_up_reply else "(none)"
+
+    outcome_context = (
+        "The student's answer is CORRECT. If diagnosed as 'understood', the script should focus on conceptual extension and transfer. If diagnosed as 'guessed' (Riddle 1: Right answer for the wrong reason), focus on guiding the student to discover and articulate the real reason."
+        if is_correct
+        else "The student's answer is INCORRECT. Focus on uncovering their specific flawed mental model and guiding them to see the contradiction via a counterexample."
+    )
+
+    return f"""You are an expert pedagogical coach helping a teacher conduct a 2-minute 1-on-1 desk intervention with a student.
 
 Question: {question_prompt}
 Correct Answer: {correct_answer}
 Key Concept: {key_idea}
 
-Student's Answer: {student_answer}
-Student's Explanation: {student_explanation or '(none)'}
-Student's Reply to Follow-up: {follow_up_reply or '(none)'}
+Student's Answer: <student_answer>{ans_clean}</student_answer>
+Student's Explanation: <student_explanation>{expl_clean}</student_explanation>
+Student's Reply to Follow-up: <student_reply>{fu_clean}</student_reply>
+Correctness: {'CORRECT' if is_correct else 'INCORRECT'}
 Diagnosed Story: {diagnosed_label}
 Associated Misconception: {misconception_label or 'General conceptual confusion / slip'}
 Signal Text: {signal_text or 'n/a'}
 Remedy Hint: {remedy_hint or 'n/a'}
 
+Pedagogical Context:
+{outcome_context}
+
 Generate a pedagogical intervention in valid JSON:
-1. misconception_breakdown: Explain in 2 sentences exactly what faulty mental model or assumption the student made.
+1. misconception_breakdown: Explain in 2 clear sentences what mental model or assumption the student held.
 2. one_on_one_script: 2 or 3 turns of conversational dialogue between the teacher and the student.
    - teacher_prompt: Socratic, empathetic question or prompt that guides the student to notice the contradiction in their logic without lecturing them.
    - anticipated_student_thinking: What the student is likely to say or realize at this stage.

@@ -15,7 +15,7 @@ from app.ai.prompts import (
     build_question_gen_prompt,
 )
 from app.ai.schemas import AIRawClassSummary, AIRawIntervention, AIRawQuestion
-from app.models import ClassRoom, Response, Question, Misconception, Student
+from app.models import ClassRoom, Misconception, Question, Response, Student
 from app.schemas import (
     AIGenerateQuestionIn,
     AIGenerateQuestionOut,
@@ -25,6 +25,7 @@ from app.schemas import (
     DifferentiatedGroup,
     ScriptTurn,
 )
+from app.services.normalizer import answers_match
 
 
 def generate_student_intervention(response: Response, ai: AIClient) -> AIInterventionOut:
@@ -59,6 +60,7 @@ def generate_student_intervention(response: Response, ai: AIClient) -> AIInterve
         misconception_label=misc_label,
         signal_text=misc_signal,
         remedy_hint=misc_remedy,
+        is_correct=response.is_correct,
     )
 
     try:
@@ -117,21 +119,39 @@ def generate_ai_question(body: AIGenerateQuestionIn, ai: AIClient) -> AIGenerate
         raw_json = ai.generate_json(prompt, AIRawQuestion, timeout_seconds=25.0)
         parsed = AIRawQuestion.model_validate_json(raw_json)
         answer_type = parsed.answer_type if parsed.answer_type in ("number", "text", "choice") else "text"
-        return AIGenerateQuestionOut(
-            prompt=parsed.prompt,
-            correct_answer=parsed.correct_answer,
-            answer_type=answer_type,
-            key_idea=parsed.key_idea,
-            choices=parsed.choices,
-            misconceptions=[
+        correct_ans = parsed.correct_answer.strip()
+        choices = [c.strip() for c in parsed.choices if c.strip()]
+
+        if answer_type == "choice":
+            if not any(answers_match(correct_ans, c, "choice") for c in choices):
+                choices.insert(0, correct_ans)
+            while len(choices) < 2:
+                choices.append("Other")
+
+        sanitized_misconceptions: list[AIMisconceptionDraft] = []
+        for m in parsed.misconceptions:
+            # Filter out any trigger that accidentally matches the correct answer
+            clean_triggers = [
+                t.strip()
+                for t in m.trigger_answers
+                if t.strip() and not answers_match(t.strip(), correct_ans, answer_type)
+            ]
+            sanitized_misconceptions.append(
                 AIMisconceptionDraft(
-                    label=m.label,
-                    trigger_answers=m.trigger_answers,
-                    signal_text=m.signal_text,
-                    remedy_hint=m.remedy_hint,
+                    label=m.label.strip(),
+                    trigger_answers=clean_triggers,
+                    signal_text=m.signal_text.strip(),
+                    remedy_hint=m.remedy_hint.strip(),
                 )
-                for m in parsed.misconceptions
-            ],
+            )
+
+        return AIGenerateQuestionOut(
+            prompt=parsed.prompt.strip(),
+            correct_answer=correct_ans,
+            answer_type=answer_type,
+            key_idea=parsed.key_idea.strip(),
+            choices=choices,
+            misconceptions=sanitized_misconceptions,
             time_limit_seconds=parsed.time_limit_seconds or 90,
         )
     except (AIUnavailable, Exception):
@@ -162,6 +182,32 @@ def generate_class_ai_summary(db: Session, classroom: ClassRoom, ai: AIClient) -
     ).all()
 
     total = len(responses)
+    topic = classroom.quiz.topic if classroom.quiz else "Quiz"
+
+    # Fast-path for zero submissions
+    if total == 0:
+        return AISummaryOut(
+            class_name=classroom.name,
+            quiz_topic=topic,
+            total_students=0,
+            correct_count=0,
+            accuracy_percentage=0.0,
+            executive_summary=(
+                f"No student responses have been submitted yet for the '{topic}' diagnostic quiz in '{classroom.name}'. "
+                f"Invite students to join using code '{classroom.join_code}'. Once responses arrive, this dashboard will "
+                f"synthesize conceptual mastery, uncover cognitive misconceptions, and build a 10-minute reteach plan."
+            ),
+            dominant_misconception="Awaiting student submissions",
+            undercover_guessers_warning="No data yet. Undercover guessers (Riddle 1) will be flagged once explanations are received.",
+            ten_minute_reteach_plan=[
+                "Step 1: Have students join the class and submit their initial answers with explanations.",
+                "Step 2: Check for any pending follow-up questions to resolve competing cognitive stories.",
+                "Step 3: Re-run this executive synthesis once responses are in."
+            ],
+            differentiated_groups=[],
+            generated_by_model="system",
+        )
+
     correct_count = sum(1 for r in responses if r.is_correct)
     pct = (correct_count / total * 100.0) if total > 0 else 0.0
 

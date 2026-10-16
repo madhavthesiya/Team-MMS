@@ -58,7 +58,7 @@ class AIRawQuestion(BaseModel):
     answer_type: str = "number"  # "number" | "text" | "choice"
     key_idea: str
     choices: list[str] = Field(default_factory=list)
-    misconceptions: list[AIRawMisconception] = Field(default_factory=list, min_length=2, max_length=5)
+    misconceptions: list[AIRawMisconception] = Field(default_factory=list, min_length=1, max_length=6)
     time_limit_seconds: int = 90
 
 
@@ -74,6 +74,7 @@ class AIRawClassSummary(BaseModel):
     executive_summary: str
     dominant_misconception: str
     undercover_guessers_warning: str
-    ten_minute_reteach_plan: list[str] = Field(default_factory=list, min_length=2, max_length=5)
+    ten_minute_reteach_plan: list[str] = Field(default_factory=list, min_length=1, max_length=6)
     differentiated_groups: list[AIRawGroup] = Field(default_factory=list)
+
 

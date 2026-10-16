@@ -14,7 +14,7 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
   .venv/Scripts/python.exe -B -X utf8 -m pytest -o addopts= -q -p no:cacheprovider
   ```
 
-  Result: **126 passed, 3 skipped** (2026-10-17, including `test_ai_features.py`). All offline tests pass cleanly.
+  Result: **130 passed, 3 skipped** (2026-10-17, including `test_ai_features.py` with trigger sanitization, composite failover, and empty class summary). All offline tests pass cleanly.
 - Live AI verification: Both Google Gemini (`gemini-3.5-flash-lite`, 5 keys) and Groq (`openai/gpt-oss-20b`, 7 keys) rotation pools tested end-to-end with live inference and automated failover (`CompositeAIClient`).
 - Frontend verification: `npm run build` completed with 0 errors. Full browser verification executed across all 3 AI features via automated subagent session.
 
