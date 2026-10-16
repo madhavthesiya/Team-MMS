@@ -9,8 +9,38 @@
       "answer_type": "number",
       "key_idea": "Fractions need a common denominator before adding: 1/2 = 2/4, so 2/4 + 1/4 = 3/4.",
       "misconceptions": [
-        {"label": "Adds tops and bottoms", "trigger_answers": ["2/6"], "signal_text": "Adds the numerators together and the denominators together.", "remedy_hint": "Use fraction strips to show halves and quarters must be the same size piece before adding."},
-        {"label": "Adds tops, keeps one bottom", "trigger_answers": ["2/4"], "signal_text": "Adds the numerators without renaming 1/2 as 2/4.", "remedy_hint": "Ask what 1/2 looks like in quarters before adding."}
+        {
+          "label": "Adds tops and bottoms",
+          "trigger_answers": [
+            "2/6"
+          ],
+          "signal_text": "Adds the numerators together and the denominators together.",
+          "remedy_hint": "Use fraction strips to show halves and quarters must be the same size piece before adding."
+        },
+        {
+          "label": "Adds tops, keeps one bottom",
+          "trigger_answers": [
+            "2/4"
+          ],
+          "signal_text": "Adds the numerators without renaming 1/2 as 2/4.",
+          "remedy_hint": "Ask what 1/2 looks like in quarters before adding."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "What is 2/5 + 3/10?",
+          "correct_answer": "7/10",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "Asha drinks 1/3 of a bottle in the morning and 1/6 in the afternoon. What fraction of the bottle has she drunk?",
+          "correct_answer": "1/2",
+          "answer_type": "number",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     },
     {
@@ -20,7 +50,30 @@
       "time_limit_seconds": 45,
       "key_idea": "With the same numerator, a smaller denominator means bigger pieces, so 1/3 is bigger than 1/5.",
       "misconceptions": [
-        {"label": "Bigger denominator means bigger fraction", "trigger_answers": ["1/5"], "signal_text": "Compares the denominators as whole numbers.", "remedy_hint": "Share one pizza among 3 people, then among 5 — who gets more?"}
+        {
+          "label": "Bigger denominator means bigger fraction",
+          "trigger_answers": [
+            "1/5"
+          ],
+          "signal_text": "Compares the denominators as whole numbers.",
+          "remedy_hint": "Share one pizza among 3 people, then among 5 — who gets more?"
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "Which is smaller: 1/4 or 1/7? Type the smaller fraction.",
+          "correct_answer": "1/7",
+          "answer_type": "number",
+          "choices": [],
+          "change": "asks for the smaller one"
+        },
+        {
+          "prompt": "Ravi gets 1/6 of a cake and Meena gets 1/8 of the same cake. Type the fraction of the person who gets more.",
+          "correct_answer": "1/6",
+          "answer_type": "number",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     },
     {
@@ -29,8 +82,39 @@
       "answer_type": "number",
       "key_idea": "Find one quarter of 20 (20 ÷ 4 = 5), then take three quarters: 3 × 5 = 15.",
       "misconceptions": [
-        {"label": "Finds only one part", "trigger_answers": ["5"], "signal_text": "Divides by the denominator but does not multiply by the numerator.", "remedy_hint": "Draw 20 dots in 4 groups and circle three groups."},
-        {"label": "Divides by the numerator", "trigger_answers": ["20/3", "6.67"], "signal_text": "Uses the top number as the divisor.", "remedy_hint": "Ask what the bottom number tells us about the groups."}
+        {
+          "label": "Finds only one part",
+          "trigger_answers": [
+            "5"
+          ],
+          "signal_text": "Divides by the denominator but does not multiply by the numerator.",
+          "remedy_hint": "Draw 20 dots in 4 groups and circle three groups."
+        },
+        {
+          "label": "Divides by the numerator",
+          "trigger_answers": [
+            "20/3",
+            "6.67"
+          ],
+          "signal_text": "Uses the top number as the divisor.",
+          "remedy_hint": "Ask what the bottom number tells us about the groups."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "What is 2/3 of 18?",
+          "correct_answer": "12",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "A class has 30 students and 3/5 of them walk to school. How many students walk?",
+          "correct_answer": "18",
+          "answer_type": "number",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     },
     {
@@ -39,8 +123,38 @@
       "answer_type": "text",
       "key_idea": "0.6 is six tenths, 6/10, which simplifies to 3/5 by dividing top and bottom by 2.",
       "misconceptions": [
-        {"label": "Does not simplify", "trigger_answers": ["6/10"], "signal_text": "Converts to tenths correctly but stops before simplifying.", "remedy_hint": "Ask for the biggest number that divides both 6 and 10."},
-        {"label": "Uses the digit as the denominator", "trigger_answers": ["1/6"], "signal_text": "Reads the decimal digit as the bottom number.", "remedy_hint": "Read 0.6 aloud as 'six tenths' and write what you hear."}
+        {
+          "label": "Does not simplify",
+          "trigger_answers": [
+            "6/10"
+          ],
+          "signal_text": "Converts to tenths correctly but stops before simplifying.",
+          "remedy_hint": "Ask for the biggest number that divides both 6 and 10."
+        },
+        {
+          "label": "Uses the digit as the denominator",
+          "trigger_answers": [
+            "1/6"
+          ],
+          "signal_text": "Reads the decimal digit as the bottom number.",
+          "remedy_hint": "Read 0.6 aloud as 'six tenths' and write what you hear."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "Write 0.75 as a fraction in its simplest form.",
+          "correct_answer": "3/4",
+          "answer_type": "text",
+          "choices": [],
+          "change": "different decimal"
+        },
+        {
+          "prompt": "A jar is 0.4 full. Write how full it is as a fraction in its simplest form.",
+          "correct_answer": "2/5",
+          "answer_type": "text",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     },
     {
@@ -49,8 +163,40 @@
       "answer_type": "number",
       "key_idea": "Multiply numerators and denominators: (2 × 3)/(3 × 4) = 6/12 = 1/2.",
       "misconceptions": [
-        {"label": "Cross-multiplies", "trigger_answers": ["8/9", "9/8"], "signal_text": "Multiplies diagonally, as if comparing fractions.", "remedy_hint": "Show 2/3 of a 3/4 strip with an area model."},
-        {"label": "Adds instead of multiplying", "trigger_answers": ["17/12", "5/7"], "signal_text": "Treats × like +.", "remedy_hint": "Ask what 'of' means in '2/3 of 3/4'."}
+        {
+          "label": "Cross-multiplies",
+          "trigger_answers": [
+            "8/9",
+            "9/8"
+          ],
+          "signal_text": "Multiplies diagonally, as if comparing fractions.",
+          "remedy_hint": "Show 2/3 of a 3/4 strip with an area model."
+        },
+        {
+          "label": "Adds instead of multiplying",
+          "trigger_answers": [
+            "17/12",
+            "5/7"
+          ],
+          "signal_text": "Treats × like +.",
+          "remedy_hint": "Ask what 'of' means in '2/3 of 3/4'."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "What is 3/5 × 5/6? Give your answer as a fraction.",
+          "correct_answer": "1/2",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "A recipe needs 3/4 cup of sugar. You make half of the recipe. How many cups of sugar do you need?",
+          "correct_answer": "3/8",
+          "answer_type": "number",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     },
     {
@@ -59,8 +205,39 @@
       "answer_type": "number",
       "key_idea": "8 − 3 = 5 slices remain out of 8 equal slices, so 5/8 of the pizza is left.",
       "misconceptions": [
-        {"label": "Gives the fraction eaten", "trigger_answers": ["3/8"], "signal_text": "Answers what was eaten instead of what is left.", "remedy_hint": "Ask the student to re-read what the question asks for."},
-        {"label": "Compares part to part", "trigger_answers": ["5/3", "3/5"], "signal_text": "Uses slices left over slices eaten instead of over the whole pizza.", "remedy_hint": "Ask what the bottom number of a fraction counts."}
+        {
+          "label": "Gives the fraction eaten",
+          "trigger_answers": [
+            "3/8"
+          ],
+          "signal_text": "Answers what was eaten instead of what is left.",
+          "remedy_hint": "Ask the student to re-read what the question asks for."
+        },
+        {
+          "label": "Compares part to part",
+          "trigger_answers": [
+            "5/3",
+            "3/5"
+          ],
+          "signal_text": "Uses slices left over slices eaten instead of over the whole pizza.",
+          "remedy_hint": "Ask what the bottom number of a fraction counts."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "A ribbon is cut into 10 equal pieces. 4 pieces are used. What fraction of the ribbon is left?",
+          "correct_answer": "3/5",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different context"
+        },
+        {
+          "prompt": "There were 12 pencils. 5 were given away. What fraction of the pencils is left?",
+          "correct_answer": "7/12",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different numbers"
+        }
       ]
     },
     {
@@ -69,18 +246,80 @@
       "answer_type": "number",
       "key_idea": "Dividing by 1/4 asks how many quarters fit into one half: two.",
       "misconceptions": [
-        {"label": "Multiplies instead of dividing", "trigger_answers": ["1/8"], "signal_text": "Multiplies straight across.", "remedy_hint": "Ask how many quarter-strips cover a half-strip."},
-        {"label": "Flips the wrong fraction", "trigger_answers": ["1/2"], "signal_text": "Inverts the first fraction instead of the second.", "remedy_hint": "Check the result with a picture: how many quarters are in a half?"}
+        {
+          "label": "Multiplies instead of dividing",
+          "trigger_answers": [
+            "1/8"
+          ],
+          "signal_text": "Multiplies straight across.",
+          "remedy_hint": "Ask how many quarter-strips cover a half-strip."
+        },
+        {
+          "label": "Flips the wrong fraction",
+          "trigger_answers": [
+            "1/2"
+          ],
+          "signal_text": "Inverts the first fraction instead of the second.",
+          "remedy_hint": "Check the result with a picture: how many quarters are in a half?"
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "What is 3/4 ÷ 1/8?",
+          "correct_answer": "6",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "How many 1/3-cup scoops fit into 2 cups of rice?",
+          "correct_answer": "6",
+          "answer_type": "number",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     },
     {
       "prompt": "Is 2/4 equal to 1/2?",
       "correct_answer": "Yes",
       "answer_type": "choice",
-      "choices": ["Yes", "No"],
+      "choices": [
+        "Yes",
+        "No"
+      ],
       "key_idea": "2/4 and 1/2 name the same amount: doubling the top and bottom keeps the value.",
       "misconceptions": [
-        {"label": "Different numbers mean different amounts", "trigger_answers": ["No"], "signal_text": "Thinks equivalent fractions differ because the digits differ.", "remedy_hint": "Fold a paper strip in half, then in half again."}
+        {
+          "label": "Different numbers mean different amounts",
+          "trigger_answers": [
+            "No"
+          ],
+          "signal_text": "Thinks equivalent fractions differ because the digits differ.",
+          "remedy_hint": "Fold a paper strip in half, then in half again."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "Is 3/9 equal to 1/3?",
+          "correct_answer": "Yes",
+          "answer_type": "choice",
+          "choices": [
+            "Yes",
+            "No"
+          ],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "Is 4/6 equal to 3/4?",
+          "correct_answer": "No",
+          "answer_type": "choice",
+          "choices": [
+            "Yes",
+            "No"
+          ],
+          "change": "the answer is No this time"
+        }
       ]
     },
     {
@@ -90,8 +329,38 @@
       "time_limit_seconds": 60,
       "key_idea": "Compare by converting to a common form: 2/5 = 0.4, 1/2 = 0.5, 3/4 = 0.75.",
       "misconceptions": [
-        {"label": "Orders by denominator", "trigger_answers": ["1/2, 3/4, 2/5"], "signal_text": "Sorts by the bottom number.", "remedy_hint": "Place each fraction on a 0 to 1 number line."},
-        {"label": "Orders by numerator", "trigger_answers": ["1/2, 2/5, 3/4"], "signal_text": "Sorts by the top number.", "remedy_hint": "Place each fraction on a 0 to 1 number line."}
+        {
+          "label": "Orders by denominator",
+          "trigger_answers": [
+            "1/2, 3/4, 2/5"
+          ],
+          "signal_text": "Sorts by the bottom number.",
+          "remedy_hint": "Place each fraction on a 0 to 1 number line."
+        },
+        {
+          "label": "Orders by numerator",
+          "trigger_answers": [
+            "1/2, 2/5, 3/4"
+          ],
+          "signal_text": "Sorts by the top number.",
+          "remedy_hint": "Place each fraction on a 0 to 1 number line."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "Put these in order from smallest to largest: 2/3, 3/5, 1/2",
+          "correct_answer": "1/2, 3/5, 2/3",
+          "answer_type": "text",
+          "choices": [],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "Put these in order from largest to smallest: 1/4, 2/3, 1/2",
+          "correct_answer": "2/3, 1/2, 1/4",
+          "answer_type": "text",
+          "choices": [],
+          "change": "reversed order"
+        }
       ]
     },
     {
@@ -100,8 +369,39 @@
       "answer_type": "number",
       "key_idea": "Rename 1/3 as 2/6, then 5/6 − 2/6 = 3/6 = 1/2.",
       "misconceptions": [
-        {"label": "Subtracts tops and bottoms", "trigger_answers": ["4/3"], "signal_text": "Subtracts the numerators and the denominators separately.", "remedy_hint": "Use sixths strips to show the pieces must match."},
-        {"label": "Forgets to rename 1/3", "trigger_answers": ["4/6", "2/3"], "signal_text": "Treats 1/3 as 1/6.", "remedy_hint": "Ask how many sixths make one third."}
+        {
+          "label": "Subtracts tops and bottoms",
+          "trigger_answers": [
+            "4/3"
+          ],
+          "signal_text": "Subtracts the numerators and the denominators separately.",
+          "remedy_hint": "Use sixths strips to show the pieces must match."
+        },
+        {
+          "label": "Forgets to rename 1/3",
+          "trigger_answers": [
+            "4/6",
+            "2/3"
+          ],
+          "signal_text": "Treats 1/3 as 1/6.",
+          "remedy_hint": "Ask how many sixths make one third."
+        }
+      ],
+      "transfer_items": [
+        {
+          "prompt": "What is 3/4 − 1/8?",
+          "correct_answer": "5/8",
+          "answer_type": "number",
+          "choices": [],
+          "change": "different numbers"
+        },
+        {
+          "prompt": "A tank is 7/10 full. Then 1/5 of the tank is used. What fraction of the tank is full now?",
+          "correct_answer": "1/2",
+          "answer_type": "number",
+          "choices": [],
+          "change": "word problem"
+        }
       ]
     }
   ]

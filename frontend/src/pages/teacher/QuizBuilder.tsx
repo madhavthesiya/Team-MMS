@@ -599,9 +599,9 @@ export default function QuizBuilder() {
           {error && <ErrorBox message={error} onRetry={() => setError(null)} />}
 
           {/* Active Question Banner & Controls */}
-          <div className="flex items-center justify-between pb-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-bold text-sm font-mono">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between pb-4 border-b border-white/10">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="w-8 h-8 shrink-0 rounded-lg bg-white text-black flex items-center justify-center font-bold text-sm font-mono">
                 {activeQuestionIndex + 1}
               </span>
               <div>
@@ -614,7 +614,7 @@ export default function QuizBuilder() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               <Button
                 variant="outline"
                 size="sm"

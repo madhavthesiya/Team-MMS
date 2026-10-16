@@ -1,8 +1,8 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import ClassRoom, Misconception, Question, Quiz, Response, Student
-from app.schemas import ClassOut, MisconceptionOut, QuestionOut, QuizIn, QuizOut
+from app.models import ClassRoom, Misconception, Question, Quiz, Response, Student, TransferItem
+from app.schemas import ClassOut, MisconceptionOut, QuestionOut, QuizIn, QuizOut, TransferItemOut
 from app.security import hash_token, new_join_code, new_token
 from app.services.errors import ConflictError
 
@@ -55,6 +55,11 @@ def replace_quiz(db: Session, cls: ClassRoom, body: QuizIn) -> Quiz:
             )
             for m in q.misconceptions
         ]
+        question.transfer_items = [
+            TransferItem(prompt=t.prompt, correct_answer=t.correct_answer, answer_type=t.answer_type,
+                         choices=list(t.choices), change=t.change)
+            for t in q.transfer_items
+        ]
         quiz.questions.append(question)
     db.add(quiz)
     db.flush()
@@ -81,6 +86,11 @@ def question_out(q: Question) -> QuestionOut:
             for m in q.misconceptions
         ],
         time_limit_seconds=q.time_limit_seconds,
+        transfer_items=[
+            TransferItemOut(transfer_item_id=t.id, prompt=t.prompt, correct_answer=t.correct_answer,
+                            answer_type=t.answer_type, choices=list(t.choices), change=t.change)
+            for t in q.transfer_items
+        ],
     )
 
 

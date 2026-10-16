@@ -69,7 +69,7 @@ export function ClassCodeModal({ open, onClose, className, joinCode }: ClassCode
 
         {/* Giant Monospace Code Display (Google Classroom Projector Style) */}
         <div className="relative group w-full max-w-md py-8 px-6 rounded-2xl bg-zinc-950 border-2 border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.08)] flex flex-col items-center justify-center transition-all hover:border-white/40">
-          <div className="font-mono text-5xl sm:text-7xl font-black tracking-[0.25em] text-white pl-[0.25em] select-all cursor-pointer">
+          <div className="font-mono text-3xl sm:text-7xl font-black tracking-[0.18em] text-white pl-[0.18em] select-all cursor-pointer">
             {joinCode}
           </div>
           <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mt-4">

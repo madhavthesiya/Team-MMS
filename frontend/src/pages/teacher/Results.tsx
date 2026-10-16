@@ -11,6 +11,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { AnimatedBadge } from "../../components/AnimatedBadge";
 import { Button } from "../../components/ui/Button";
 import { ClassNav } from "../../components/ClassNav";
+import { TransferPanel } from "../../components/TransferPanel";
 import {
   RefreshCw,
   Sparkles,
@@ -119,7 +120,7 @@ export default function Results() {
       />
 
       {/* Action Strip */}
-      <div className="shrink-0 border-b border-white/10 bg-zinc-950/60 px-4 sm:px-6 py-2 flex items-center justify-between gap-4">
+      <div className="shrink-0 border-b border-white/10 bg-zinc-950/60 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
             Cognitive Diagnostics
@@ -410,6 +411,11 @@ export default function Results() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* Riddle 4: did the understanding travel and last? */}
+                {classId && token && (
+                  <TransferPanel classId={classId} token={token} questionId={activeQ.question_id} />
                 )}
 
                 {/* Correct vs Incorrect Split Grid */}

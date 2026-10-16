@@ -5,6 +5,7 @@ from app.models import ClassRoom, Student
 from app.schemas import PendingFollowUpOut, StudentOut, StudentQuestionOut, StudentQuizOut
 from app.security import hash_token, new_token
 from app.services.errors import NotFoundError
+from app.services.transfer import student_rechecks
 
 
 def join_class(db: Session, join_code: str, nickname: str) -> tuple[Student, str]:
@@ -45,6 +46,7 @@ def student_out(student: Student) -> StudentOut:
         quiz=student_quiz,
         answered_question_ids=sorted(r.question_id for r in student.responses),
         pending_follow_ups=pending_follow_ups(student),
+        rechecks=student_rechecks(student),
     )
 
 

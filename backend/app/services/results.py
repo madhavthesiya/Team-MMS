@@ -21,6 +21,7 @@ from app.schemas import (
     WrongAnswerGroup,
 )
 from app.services.classrooms import question_out
+from app.services.transfer import rechecks_for
 from app.services.normalizer import normalize_answer
 
 LABEL_ORDER = ["understood", "misread", "misconception", "guessed", "slip", "out_of_time", "not_sure"]
@@ -187,4 +188,5 @@ def response_detail(response: Response) -> ResponseDetail:
             for d in response.diagnoses
             for run in d.runs
         ],
+        rechecks=rechecks_for(response.student, response.question_id),
     )

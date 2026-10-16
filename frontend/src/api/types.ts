@@ -21,6 +21,19 @@ export interface MisconceptionIn {
   remedy_hint: string;
 }
 
+// Riddle 4: the same key idea in a changed situation, used for later re-checks.
+export interface TransferItemIn {
+  prompt: string;
+  correct_answer: string;
+  answer_type: AnswerType;
+  choices: string[];
+  change: string;
+}
+
+export interface TransferItem extends TransferItemIn {
+  transfer_item_id: number;
+}
+
 export interface QuestionIn {
   prompt: string;
   correct_answer: string;
@@ -29,6 +42,7 @@ export interface QuestionIn {
   choices: string[];
   misconceptions: MisconceptionIn[];
   time_limit_seconds?: number | null;
+  transfer_items?: TransferItemIn[];
 }
 
 export interface QuizIn {
@@ -41,11 +55,12 @@ export interface Misconception extends MisconceptionIn {
   misconception_id: number;
 }
 
-export interface Question extends Omit<QuestionIn, "misconceptions"> {
+export interface Question extends Omit<QuestionIn, "misconceptions" | "transfer_items"> {
   question_id: number;
   position: number;
   misconceptions: Misconception[];
   time_limit_seconds?: number | null;
+  transfer_items?: TransferItem[];
 }
 
 export interface Quiz {
@@ -86,6 +101,13 @@ export interface PendingFollowUp {
   reply_saved?: boolean;
 }
 
+export interface StudentRecheck {
+  recheck_id: number;
+  prompt: string;
+  answer_type: AnswerType;
+  choices: string[];
+}
+
 export interface StudentInfo {
   student_id: number;
   nickname: string;
@@ -93,6 +115,94 @@ export interface StudentInfo {
   quiz: StudentQuiz | null;
   answered_question_ids: number[];
   pending_follow_ups: PendingFollowUp[];
+  rechecks?: StudentRecheck[];
+}
+
+export interface RecheckAnswerIn {
+  answer: string;
+  explanation: string;
+  self_confidence: Confidence;
+  time_spent_seconds: number;
+}
+
+export type Verdict = "pending" | "lasting" | "travelled" | "unconvincing" | "did_not_travel";
+
+export interface ScheduleRechecksIn {
+  question_id: number;
+  student_ids?: number[] | null;
+  delay_days: number;
+  next_step: string;
+}
+
+export interface ScheduledRecheck {
+  recheck_id: number;
+  student_id: number;
+  nickname: string;
+  transfer_item_id: number;
+  change: string;
+  available_at: string;
+  next_step: string;
+}
+
+export interface ScheduleRechecksOut {
+  scheduled: ScheduledRecheck[];
+  skipped: { student_id: number; nickname: string; reason: string }[];
+}
+
+export interface RecheckHypothesis {
+  kind: Exclude<Label, "not_sure">;
+  misconception_label: string | null;
+  evidence_for: string;
+  evidence_against: string;
+  likelihood: number;
+  status: "open" | "supported" | "ruled_out";
+  would_confirm: string;
+}
+
+export interface RecheckView {
+  recheck_id: number;
+  student_id: number;
+  nickname: string;
+  question_id: number;
+  transfer_item: TransferItem;
+  next_step: string;
+  created_at: string;
+  available_at: string;
+  answered_at: string | null;
+  answer: string | null;
+  explanation: string | null;
+  self_confidence: Confidence | null;
+  time_spent_seconds: number | null;
+  is_correct: boolean | null;
+  reading_label: Label | null;
+  reading_source: string | null;
+  misconception_label: string | null;
+  hypotheses: RecheckHypothesis[];
+  gap_days: number | null;
+  verdict: Verdict;
+  change_plan: string;
+  original_correct: boolean | null;
+  original_label: Label | null;
+}
+
+export interface TransferQuestionReport {
+  question_id: number;
+  position: number;
+  prompt: string;
+  transfer_item_count: number;
+  scheduled: number;
+  waiting: number;
+  answered: number;
+  better_marks: number;
+  better_understanding: number;
+  verdicts: Record<Verdict, number>;
+  rechecks: RecheckView[];
+}
+
+export interface TransferReport {
+  class_id: number;
+  lasting_days: number;
+  questions: TransferQuestionReport[];
 }
 
 export interface JoinResult extends StudentInfo {
@@ -249,6 +359,7 @@ export interface ResponseDetail {
   history: HistoryEntry[];
   follow_up: FollowUpView | null;
   trace: TraceStep[];
+  rechecks?: RecheckView[];
 }
 
 export interface OverrideIn {

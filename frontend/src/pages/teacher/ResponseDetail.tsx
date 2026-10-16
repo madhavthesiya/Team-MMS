@@ -10,6 +10,7 @@ import { Banner } from "../../components/Banner";
 import { AnimatedBadge } from "../../components/AnimatedBadge";
 import { Button } from "../../components/ui/Button";
 import { Textarea } from "../../components/ui/Textarea";
+import { RecheckRow } from "../../components/TransferPanel";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -619,6 +620,16 @@ export default function ResponseDetail() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Riddle 4: later re-checks in changed situations, without the tool */}
+          {detail.rechecks && detail.rechecks.length > 0 && (
+            <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-white/10 space-y-3">
+              <h3 className="text-sm font-bold font-heading text-white">Did it travel? Re-checks</h3>
+              {detail.rechecks.map((rc) => (
+                <RecheckRow key={rc.recheck_id} recheck={rc} showNickname={false} />
+              ))}
             </div>
           )}
 

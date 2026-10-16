@@ -7,6 +7,7 @@ import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
 import { EmptyState } from "../../components/EmptyState";
 import { Button } from "../../components/ui/Button";
+import { RecheckCard } from "../../components/RecheckCard";
 import { Textarea } from "../../components/ui/Textarea";
 import { Input } from "../../components/ui/Input";
 import {
@@ -183,15 +184,17 @@ export default function StudentQuiz() {
     !activeFollowUp &&
     info.answered_question_ids.length >= info.quiz.questions.length;
 
+  const hasCheckIn = Boolean(info?.rechecks && info.rechecks.length > 0);
+
   useEffect(() => {
-    if (isCompleted) {
+    if (isCompleted && !hasCheckIn) {
       confetti({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 },
       });
     }
-  }, [isCompleted]);
+  }, [isCompleted, hasCheckIn]);
 
   async function handleSubmitResponse(e: React.FormEvent) {
     e.preventDefault();
@@ -308,6 +311,11 @@ export default function StudentQuiz() {
         </EmptyState>
       </div>
     );
+  }
+
+  // Riddle 4: once the quiz is done, an open check-in (a changed situation, no hints) comes first.
+  if (isCompleted && token && info.rechecks && info.rechecks.length > 0) {
+    return <RecheckCard key={info.rechecks[0].recheck_id} recheck={info.rechecks[0]} token={token} nickname={info.nickname} onDone={loadMe} />;
   }
 
   // Done Celebration Screen

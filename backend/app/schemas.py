@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from app.domain import AnswerType, Confidence, HypothesisKind, HypStatus, Label, Source, Status
-from app.services.normalizer import answers_match
+from app.services.normalizer import answers_match, normalize_text
 
 
 Str30 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
@@ -38,6 +38,29 @@ class MisconceptionIn(BaseModel):
     remedy_hint: OptStr500 = ""
 
 
+def _check_choices(answer_type: str, correct_answer: str, choices: list[str]) -> None:
+    if answer_type == "choice":
+        if len(choices) < 2:
+            raise ValueError("choice questions need at least 2 choices")
+        if not any(answers_match(correct_answer, c, "choice") for c in choices):
+            raise ValueError("correct_answer must be one of the choices")
+
+
+class TransferItemIn(BaseModel):
+    """The same key idea in a changed situation, used for later re-checks (Riddle 4)."""
+
+    prompt: Str1000
+    correct_answer: Str100
+    answer_type: AnswerType
+    choices: list[Str100] = Field(default_factory=list, max_length=6)
+    change: Str80  # what is different from the original question, e.g. "word problem", "asks for the smaller one"
+
+    @model_validator(mode="after")
+    def _consistent(self) -> "TransferItemIn":
+        _check_choices(self.answer_type, self.correct_answer, self.choices)
+        return self
+
+
 class QuestionIn(BaseModel):
     prompt: Str1000
     correct_answer: Str100
@@ -46,18 +69,18 @@ class QuestionIn(BaseModel):
     choices: list[Str100] = Field(default_factory=list, max_length=6)
     misconceptions: list[MisconceptionIn] = Field(default_factory=list, max_length=6)
     time_limit_seconds: int | None = Field(default=None, ge=10, le=3600)
+    transfer_items: list[TransferItemIn] = Field(default_factory=list, max_length=6)
 
     @model_validator(mode="after")
     def _consistent(self) -> "QuestionIn":
-        if self.answer_type == "choice":
-            if len(self.choices) < 2:
-                raise ValueError("choice questions need at least 2 choices")
-            if not any(answers_match(self.correct_answer, c, "choice") for c in self.choices):
-                raise ValueError("correct_answer must be one of the choices")
+        _check_choices(self.answer_type, self.correct_answer, self.choices)
         for m in self.misconceptions:
             for trigger in m.trigger_answers:
                 if answers_match(trigger, self.correct_answer, self.answer_type):
                     raise ValueError(f"trigger answer '{trigger}' is the correct answer")
+        for item in self.transfer_items:
+            if normalize_text(item.prompt) == normalize_text(self.prompt):
+                raise ValueError("a re-check item must change the situation, not repeat the question")
         return self
 
 
@@ -75,6 +98,15 @@ class MisconceptionOut(BaseModel):
     remedy_hint: str
 
 
+class TransferItemOut(BaseModel):
+    transfer_item_id: int
+    prompt: str
+    correct_answer: str
+    answer_type: AnswerType
+    choices: list[str]
+    change: str
+
+
 class QuestionOut(BaseModel):
     question_id: int
     position: int
@@ -85,6 +117,7 @@ class QuestionOut(BaseModel):
     choices: list[str]
     misconceptions: list[MisconceptionOut]
     time_limit_seconds: int | None
+    transfer_items: list[TransferItemOut] = Field(default_factory=list)
 
 
 class QuizOut(BaseModel):
@@ -132,6 +165,15 @@ class PendingFollowUpOut(BaseModel):
     reply_saved: bool  # True: the reply is in, processing didn't finish → call .../resume
 
 
+class StudentRecheckOut(BaseModel):
+    """A check-in that is open now. Deliberately says nothing about the original question or the change."""
+
+    recheck_id: int
+    prompt: str
+    answer_type: AnswerType
+    choices: list[str]
+
+
 class StudentOut(BaseModel):
     student_id: int
     nickname: str
@@ -139,6 +181,7 @@ class StudentOut(BaseModel):
     quiz: StudentQuizOut | None
     answered_question_ids: list[int]
     pending_follow_ups: list[PendingFollowUpOut]
+    rechecks: list[StudentRecheckOut] = Field(default_factory=list)
 
 
 class JoinOut(StudentOut):
@@ -296,6 +339,100 @@ class TraceView(BaseModel):
     detail: str | None
 
 
+Verdict = Literal["pending", "lasting", "travelled", "unconvincing", "did_not_travel"]
+
+
+class RecheckAnswerIn(BaseModel):
+    answer: Str100
+    explanation: OptStr2000 = ""
+    self_confidence: Confidence
+    time_spent_seconds: int | None = Field(default=None, ge=0, le=7200)
+
+
+class ScheduleRechecksIn(BaseModel):
+    question_id: int
+    student_ids: list[int] | None = None  # None: everyone in the class who answered the question
+    delay_days: int = Field(default=7, ge=0, le=90)
+    next_step: OptStr500 = ""  # what you are offering before the re-check; default comes from each student's story
+
+
+class ScheduledRecheck(BaseModel):
+    recheck_id: int
+    student_id: int
+    nickname: str
+    transfer_item_id: int
+    change: str
+    available_at: datetime
+    next_step: str
+
+
+class SkippedStudent(BaseModel):
+    student_id: int
+    nickname: str
+    reason: str
+
+
+class ScheduleRechecksOut(BaseModel):
+    scheduled: list[ScheduledRecheck]
+    skipped: list[SkippedStudent]
+
+
+class RecheckHypothesis(BaseModel):
+    kind: HypothesisKind
+    misconception_label: str | None
+    evidence_for: str
+    evidence_against: str
+    likelihood: float
+    status: HypStatus
+    would_confirm: str
+
+
+class RecheckView(BaseModel):
+    recheck_id: int
+    student_id: int
+    nickname: str
+    question_id: int
+    transfer_item: TransferItemOut
+    next_step: str
+    created_at: datetime
+    available_at: datetime
+    answered_at: datetime | None
+    answer: str | None
+    explanation: str | None
+    self_confidence: Confidence | None
+    time_spent_seconds: int | None
+    is_correct: bool | None
+    reading_label: Label | None
+    reading_source: Source | None
+    misconception_label: str | None
+    hypotheses: list[RecheckHypothesis]
+    gap_days: float | None
+    verdict: Verdict
+    change_plan: str
+    original_correct: bool | None
+    original_label: Label | None
+
+
+class TransferQuestionReport(BaseModel):
+    question_id: int
+    position: int
+    prompt: str
+    transfer_item_count: int
+    scheduled: int
+    waiting: int  # scheduled but not open yet
+    answered: int
+    better_marks: int  # answered re-checks with a right answer
+    better_understanding: int  # ...whose explanation also showed the key idea (travelled or lasted)
+    verdicts: dict[str, int]
+    rechecks: list[RecheckView]
+
+
+class TransferReport(BaseModel):
+    class_id: int
+    lasting_days: float
+    questions: list[TransferQuestionReport]
+
+
 class ResponseDetail(BaseModel):
     response_id: int
     student_id: int
@@ -313,6 +450,7 @@ class ResponseDetail(BaseModel):
     history: list[HistoryEntry]
     follow_up: FollowUpView | None
     trace: list[TraceView]
+    rechecks: list[RecheckView] = Field(default_factory=list)
 
 
 class OverrideIn(BaseModel):
