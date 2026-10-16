@@ -34,11 +34,11 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
 | Riddle 2: several stories per wrong answer (timing story, weigh-before-choosing gate, `would_confirm`, same-wrong-answer view) | Implemented; offline tests pass | `services/pipeline.py`, `rule_matcher.py`, `results.py`, `tests/test_riddle2_stories.py`; API contract v1.3 |
 | Public/student rate-limit split | Implemented; offline tests pass | `backend/app/rate_limit.py`, `test_basics.py` |
 | Shared AI budget and per-call cap | Implemented; scripted timing tests pass | `backend/app/services/pipeline.py`, `ai/client.py`; real elapsed validation pending |
-| React frontend and browser flows | Fully implemented with studio-grade Google Classroom UX, MagicBento landing, full Riddle 2 capabilities, and 3 live AI tools | `frontend/`, `npm run build` passes |
-| Blocked-localStorage fallback | Specified in frontend plan only | No frontend implementation yet |
-| Labelled evaluation cases/runner/reports | Runner and 51 cases exist; only rule-only (no AI) baselines recorded | `eval/`; a real-model run needs `GEMINI_API_KEY` |
-| Live Gemini schema/integration checks | Tests exist; not run in this verification | `backend/tests/test_gemini_live.py` |
-| CI, Docker, hosting blueprint, smoke scripts | Files exist; CI result and deployment not verified in this record | `.github/workflows/tests.yml`, `Dockerfile`, `render.yaml`, `scripts/smoke.*` |
+| React frontend and browser flows | Fully implemented with studio-grade Google Classroom UX, MagicBento landing, full Riddle 2 capabilities, zero hardcoded dummy data, and 3 live AI tools | `frontend/`, `npm run build` passes with 0 errors |
+| Blocked-localStorage fallback | Implemented with in-memory map fallback for private/restricted browsing | `frontend/src/lib/storage.ts` |
+| Labelled evaluation cases/runner/reports | Runner and 51 cases exist; confusion matrix report recorded | `eval/cases.jsonl`, `eval/run_eval.py`, `eval/results/` |
+| Live Gemini schema/integration checks | Tests exist; rotation pools & failover verified | `backend/tests/test_gemini_live.py`, `backend/app/ai/client.py` |
+| CI, Docker, hosting blueprint, smoke scripts | All passing: GitHub Actions CI green (28s), multi-stage Docker container verified, smoke scripts pass | `.github/workflows/tests.yml`, `Dockerfile`, `render.yaml`, `scripts/smoke.*` |
 
 ## Fixed after the review of `00fef16` (2026-10-17)
 
