@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SwarmCursor from "./SwarmCursor";
 import CardNav, { type CardNavItem } from "./CardNav";
+import { api } from "../api/client";
 
 const navItems: CardNavItem[] = [
   {
@@ -38,8 +39,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [healthy, setHealthy] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/health")
-      .then((r) => (r.ok ? r.json() : null))
+    api
+      .checkHealth()
       .then((d) => setHealthy(d?.status === "ok"))
       .catch(() => setHealthy(false));
   }, []);

@@ -84,6 +84,8 @@ async function request<T>(
 }
 
 export const api = {
+  checkHealth: () =>
+    request<{ status: string; db: string; ai_configured: boolean }>("GET", "/health"),
   createClass: (name: string) => request<ClassCreated>("POST", "/classes", { name }),
   createSampleClass: () => request<ClassCreated>("POST", "/classes/sample"),
   getClass: (id: number, token: string) =>
