@@ -31,6 +31,7 @@ The status document is a dated snapshot, not a live task manager. Verify its cla
 - Follow-ups are optional: `decline` records `skip`, `not_sure`, or `teacher` without AI inference or changing correctness. Predicted replies (`expected_evidence`) and the selection rationale are teacher-only planning metadata, never observed evidence. Keep checks short and non-repetitive; an unavailable useful check means teacher review, not another test.
 - A confident diagnosis backed by a quote from the follow-up reply may resolve an answer-pattern disagreement. Preserve the ruled-out interpretation in history.
 - For a wrong answer, choose a story only after alternatives were weighed (`MIN_STORIES_WEIGHED`, `STORY_MARGIN` in `pipeline.py`). "Ran out of time" rests only on recorded timing, never on model inference. Keep one hypothesis per story.
+- Riddle 4: learning counts only from a re-check on a transfer item (changed situation, never the same item twice), answered without follow-ups or hints, with a right answer whose explanation shows the key idea (rules + AI). "Lasted" also needs `RECHECK_LASTING_DAYS` since the first answer. A rule-only reading is never counted as learned. Re-checks are new evidence; never edit the original response.
 - Gemini failure must produce an honest, visibly rule-only fallback. Never substitute canned AI results.
 - Sample quizzes are input data only. Mock model outputs belong in `backend/tests/`, never in application code or a future frontend.
 

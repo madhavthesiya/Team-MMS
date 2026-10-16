@@ -60,6 +60,9 @@ class Question(Base):
     time_limit_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     quiz: Mapped[Quiz] = relationship(back_populates="questions")
+    transfer_items: Mapped[list["TransferItem"]] = relationship(
+        back_populates="question", cascade="all, delete-orphan", order_by="TransferItem.id"
+    )
     misconceptions: Mapped[list["Misconception"]] = relationship(
         back_populates="question", cascade="all, delete-orphan", order_by="Misconception.id"
     )
@@ -91,6 +94,7 @@ class Student(Base):
 
     classroom: Mapped[ClassRoom] = relationship(back_populates="students")
     responses: Mapped[list["Response"]] = relationship(back_populates="student", cascade="all, delete-orphan")
+    rechecks: Mapped[list["Recheck"]] = relationship(back_populates="student", cascade="all, delete-orphan")
 
 
 class Response(Base):
@@ -204,3 +208,56 @@ class AIRun(Base):
     detail: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     diagnosis: Mapped[Diagnosis] = relationship(back_populates="runs")
+
+
+class TransferItem(Base):
+    """The same key idea in a changed situation (new numbers, a story, the reverse question...).
+    Written by the teacher; used for re-checks so a better mark can't come from a familiar item."""
+
+    __tablename__ = "transfer_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"))
+    prompt: Mapped[str] = mapped_column(Text)
+    correct_answer: Mapped[str] = mapped_column(String(100))
+    answer_type: Mapped[str] = mapped_column(String(10))
+    choices: Mapped[list[str]] = mapped_column(JSON, default=list)
+    change: Mapped[str] = mapped_column(String(80))  # what is different from the original, in the teacher's words
+
+    question: Mapped[Question] = relationship(back_populates="transfer_items")
+
+
+class Recheck(Base):
+    """A later, unaided attempt at a transfer item: did the understanding travel and last?
+
+    Written once (immutable evidence, like Response). The original response is never changed;
+    the verdict describes this attempt, and "didn't travel" leads to a changed next step."""
+
+    __tablename__ = "rechecks"
+    __table_args__ = (UniqueConstraint("student_id", "transfer_item_id"),)  # never the same item twice
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"))
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"))
+    transfer_item_id: Mapped[int] = mapped_column(ForeignKey("transfer_items.id", ondelete="CASCADE"))
+    next_step: Mapped[str] = mapped_column(Text, default="")  # what was offered before this re-check
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    answer_raw: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    explanation_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    self_confidence: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    time_spent_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_correct: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    reading_label: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    reading_source: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    reading_misconception_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    hypotheses: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    trace: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    gap_days: Mapped[float | None] = mapped_column(Float, nullable=True)  # since the original answer
+    verdict: Mapped[str] = mapped_column(String(20), default="pending")
+    change_plan: Mapped[str] = mapped_column(Text, default="")
+
+    student: Mapped[Student] = relationship(back_populates="rechecks")
+    question: Mapped[Question] = relationship()
+    transfer_item: Mapped[TransferItem] = relationship()

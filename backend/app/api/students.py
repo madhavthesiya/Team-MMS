@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import AIDep, AppSettings, CurrentStudent, DbSession
 from app.rate_limit import limit_public, limit_student
-from app.schemas import DeclineIn, JoinIn, JoinOut, ReplyIn, ReplyOut, StudentOut
+from app.schemas import DeclineIn, JoinIn, JoinOut, RecheckAnswerIn, ReplyIn, ReplyOut, StudentOut
 from app.services.diagnosis_store import decline_follow_up, reply_to_follow_up, resume_follow_up
 from app.services.students import join_class, student_out
+from app.services.transfer import answer_recheck
 
 router = APIRouter(prefix="/api", tags=["students"])
 
@@ -40,4 +41,14 @@ def resume(follow_up_id: int, student: CurrentStudent, db: DbSession, ai: AIDep,
 def decline(follow_up_id: int, body: DeclineIn, student: CurrentStudent, db: DbSession) -> ReplyOut:
     """Stop the optional check without asking the model to interpret a refusal."""
     decline_follow_up(db, student, follow_up_id, body.reason)
+    return ReplyOut()
+
+
+@router.post("/rechecks/{recheck_id}/answer", dependencies=[Depends(limit_student)])
+def answer_check_in(
+    recheck_id: int, body: RecheckAnswerIn, student: CurrentStudent, db: DbSession, ai: AIDep, settings: AppSettings
+) -> ReplyOut:
+    """Riddle 4: a later check-in in a changed situation, answered without follow-ups or hints.
+    Like every student endpoint, it never returns correctness or a verdict."""
+    answer_recheck(db, student, recheck_id, body, ai, settings)  # commits its own write
     return ReplyOut()

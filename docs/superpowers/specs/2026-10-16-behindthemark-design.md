@@ -150,3 +150,16 @@ One more interaction should distinguish possible explanations without repeating 
 - Store original evidence unchanged. Declines close the pending check, retain competing stories and leave `not_sure` unless a teacher already decided. Teacher overrides remain authoritative.
 - Show why the check was chosen, predictions versus actual reply/choice, and teacher controls. No useful safe check means teacher review, not a generic repeat question.
 - See [the Riddle 3 handoff](../plans/2026-10-17-riddle-3.md) for implementation and verification boundaries.
+
+## 12. Riddle 4 — Better Marks, Better Understanding? (revealed 2026-10-17)
+
+> You offer a next step, and the next score rises. Perhaps the idea became clear. Perhaps the pattern became familiar. Perhaps the learner just got used to your tool. Change the situation, take the tool away, come back in a month: does the understanding survive? What would convince you that someone has learned something, not just got better at your questions, and what do you change when it didn't travel?
+
+How the build responds (details: [handoff](../plans/2026-10-17-riddle-4.md), contract v1.5):
+
+- **What would convince us:** a re-check on a **transfer item** — the same key idea in a changed situation, written by the teacher with a short note of what changed — answered **without the tool** (follow-ups disabled, no hints, nothing about the original question shown) and **after time**, with a right answer whose explanation shows the key idea (rules and AI agree on `understood`).
+- **Not just better at our questions:** a student never gets the same transfer item twice, and the next one prefers a kind of change they haven't met. A right answer without the key idea is "Right answer, reasoning not shown", not learning. Without the AI it is never counted as learned.
+- **Come back in a month:** the teacher picks when the re-check opens (now, tomorrow, a week, a month). "Lasted" needs the gap since the first answer to reach `RECHECK_LASTING_DAYS` (7); a sooner success is "Travelled — check again later".
+- **What we change when it didn't travel:** the story behind the new miss chooses the change (the mistaken rule came back → a different representation or counterexample, naming the step that didn't carry over; missed a condition → practise spotting it, then a differently worded item; slip → re-check before reteaching; no reasoning → talk it through). Then another re-check in yet another situation.
+- **Better marks vs better understanding:** per question, the teacher sees right answers on re-checks next to those that also showed the key idea, plus how many lasted.
+- **Data:** new tables `transfer_items` and `rechecks` (created by `create_all` on existing databases; nothing altered). `UNIQUE(student_id, transfer_item_id)`. A re-check is written once, with a conditional update (no double attempts).

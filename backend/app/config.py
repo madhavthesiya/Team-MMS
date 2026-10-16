@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ai_budget_seconds: float = 30.0  # max for all model calls in one request (frontend waits 45 s)
     rate_limit_public: str = "120/minute"  # per IP: create class, join (a class shares one Wi-Fi IP)
     rate_limit_student: str = "20/minute"  # per student token: answers and follow-up replies
+    recheck_lasting_days: float = 7.0  # Riddle 4: a re-check this long after the first answer can show it lasted
     frontend_dist: str = str(REPO_ROOT / "frontend" / "dist")
 
     def get_gemini_keys(self) -> list[str]:

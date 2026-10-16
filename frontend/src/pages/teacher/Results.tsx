@@ -11,6 +11,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { AnimatedBadge } from "../../components/AnimatedBadge";
 import { Button } from "../../components/ui/Button";
 import { ClassNav } from "../../components/ClassNav";
+import { TransferPanel } from "../../components/TransferPanel";
 import {
   RefreshCw,
   Sparkles,
@@ -410,6 +411,11 @@ export default function Results() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* Riddle 4: did the understanding travel and last? */}
+                {classId && token && (
+                  <TransferPanel classId={classId} token={token} questionId={activeQ.question_id} />
                 )}
 
                 {/* Correct vs Incorrect Split Grid */}

@@ -1,4 +1,6 @@
-# BehindTheMark — API Contract (v1.4)
+# BehindTheMark — API Contract (v1.5)
+
+> v1.5 (Riddle 4 — Better Marks, Better Understanding?): questions carry teacher-written `transfer_items` (the same idea in a changed situation); new teacher `POST /api/classes/{id}/questions/{qid}/transfer-items`, `POST /api/classes/{id}/rechecks`, `GET /api/classes/{id}/transfer`; `GET /api/students/me` adds `rechecks` (open check-ins); new student `POST /api/rechecks/{id}/answer`; `ResponseDetail.rechecks`. Existing shapes unchanged.
 
 > v1.4 (Riddle 3 — The Question That Separates): optional follow-ups; new student `POST /api/follow-ups/{id}/decline`; teacher-only follow-up `rationale`, `expected_evidence`, `declined_reason`. Existing reply/submit shapes are unchanged. Old stored follow-ups have empty metadata after an additive upgrade.
 
@@ -311,3 +313,29 @@ Synthesizes whole-classroom cognitive trends, dominant roadblocks, and provides 
 }
 ```
 
+## Re-checks (Riddle 4 — does the understanding travel and last?)
+
+A re-check is a later attempt at a **transfer item**: the same key idea in a changed situation, written by the teacher. It is answered **without the tool** (no follow-up, no hints), and its verdict needs a right answer whose explanation shows the key idea. "Lasted" also needs the gap since the first answer to reach `RECHECK_LASTING_DAYS` (default 7). A student never gets the same transfer item twice.
+
+`QuestionIn.transfer_items` (optional, ≤6): `{"prompt", "correct_answer", "answer_type", "choices", "change"}`, where `change` (1–80 chars) says what is different, e.g. `"word problem"`. The prompt must differ from the original question (`422` otherwise). `QuestionOut.transfer_items` adds `transfer_item_id`. Student endpoints never include transfer items.
+
+### `POST /api/classes/{class_id}/questions/{question_id}/transfer-items` · teacher
+Body: one transfer item → `201` with `transfer_item_id`. Allowed after students have answered (it adds a situation, not evidence).
+
+### `POST /api/classes/{class_id}/rechecks` · teacher
+Body `{"question_id": 1, "student_ids": null, "delay_days": 7, "next_step": ""}`. `student_ids: null` means everyone who answered the question. `delay_days` 0–90 (0 is fine for a demo, but the verdict then can't say "lasted"). An empty `next_step` defaults per student from their current story (the teacher's `remedy_hint` for a diagnosed mistaken rule).
+`201` → `{"scheduled": [{"recheck_id", "student_id", "nickname", "transfer_item_id", "change", "available_at", "next_step"}], "skipped": [{"student_id", "nickname", "reason"}]}`. Skip reasons: already has a waiting re-check for this question; no unused transfer item left; hasn't answered (only when listed explicitly). `409` if the question has no transfer items.
+
+### `GET /api/classes/{class_id}/transfer` · teacher
+`200` → `{"class_id", "lasting_days": 7, "questions": [{"question_id", "position", "prompt", "transfer_item_count", "scheduled", "waiting", "answered", "better_marks", "better_understanding", "verdicts": {"pending", "lasting", "travelled", "unconvincing", "did_not_travel"}, "rechecks": [RecheckView]}]}`.
+`better_marks` = answered re-checks with a right answer; `better_understanding` = those that also showed the key idea (`travelled` + `lasting`).
+
+**RecheckView:** `recheck_id, student_id, nickname, question_id, transfer_item, next_step, created_at, available_at, answered_at, answer, explanation, self_confidence, time_spent_seconds, is_correct, reading_label, reading_source, misconception_label, hypotheses[{kind, misconception_label, evidence_for, evidence_against, likelihood, status, would_confirm}], gap_days, verdict, change_plan, original_correct, original_label`.
+
+Verdicts and UI copy: `lasting` → "Learned — travelled and lasted"; `travelled` → "Travelled — check again later"; `unconvincing` → "Right answer, reasoning not shown" (also used when the AI was unavailable, so the explanation wasn't checked); `did_not_travel` → "Didn't travel"; `pending` → "Waiting for the check-in". `change_plan` is what to do next, chosen from the verdict and, when it didn't travel, the story behind the new miss.
+
+### `GET /api/students/me` · student (addition)
+`rechecks`: check-ins open now, `[{"recheck_id", "prompt", "answer_type", "choices"}]`. Nothing about the original question, the change, or results. Show them once the quiz is done.
+
+### `POST /api/rechecks/{recheck_id}/answer` · student
+Body `{"answer", "explanation", "self_confidence", "time_spent_seconds"}` (same limits as submit) → `200 {"status": "done"}`. No follow-up and no verdict are returned. `409` already answered or not open yet; `404` not yours. Same ≤30 s budget as submit.

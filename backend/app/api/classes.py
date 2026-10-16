@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from fastapi import Response as HttpResponse
 
-from app.api.deps import AIDep, DbSession, TeacherClass
+from app.api.deps import AIDep, AppSettings, DbSession, TeacherClass
 from app.rate_limit import limit_public
 from app.schemas import (
     AIGenerateQuestionIn,
@@ -13,11 +13,17 @@ from app.schemas import (
     QuizIn,
     QuizOut,
     ResultsOut,
+    ScheduleRechecksIn,
+    ScheduleRechecksOut,
+    TransferItemIn,
+    TransferItemOut,
+    TransferReport,
 )
 from app.services.ai_features import generate_ai_question, generate_class_ai_summary
 from app.services.classrooms import class_out, create_classroom, quiz_out, replace_quiz
 from app.services.results import build_results
 from app.services.sample import SAMPLE_CLASS_NAME, load_sample_quiz
+from app.services.transfer import add_transfer_item, schedule_rechecks, transfer_item_out, transfer_report
 
 router = APIRouter(prefix="/api/classes", tags=["classes"])
 
@@ -73,3 +79,27 @@ def delete_class(cls: TeacherClass, db: DbSession) -> HttpResponse:
     db.commit()
     return HttpResponse(status_code=status.HTTP_204_NO_CONTENT)
 
+
+# ---------- Riddle 4: does the understanding travel and last? ----------
+
+
+@router.post("/{class_id}/questions/{question_id}/transfer-items", status_code=status.HTTP_201_CREATED)
+def create_transfer_item(question_id: int, body: TransferItemIn, cls: TeacherClass, db: DbSession) -> TransferItemOut:
+    """Add the same idea in a new situation. Allowed after students have answered: it adds no evidence."""
+    item = add_transfer_item(db, cls, question_id, body)
+    db.commit()
+    return transfer_item_out(item)
+
+
+@router.post("/{class_id}/rechecks", status_code=status.HTTP_201_CREATED)
+def create_rechecks(body: ScheduleRechecksIn, cls: TeacherClass, db: DbSession) -> ScheduleRechecksOut:
+    """Offer a next step and schedule an unaided re-check in a changed situation, after a delay."""
+    result = schedule_rechecks(db, cls, body)
+    db.commit()
+    return result
+
+
+@router.get("/{class_id}/transfer")
+def get_transfer_report(cls: TeacherClass, db: DbSession, settings: AppSettings) -> TransferReport:
+    """Better marks vs better understanding, per question, with every re-check and its verdict."""
+    return transfer_report(db, cls, settings)

@@ -10,11 +10,17 @@ import type {
   OverrideIn,
   Quiz,
   QuizIn,
+  RecheckAnswerIn,
   ResponseDetail,
   ResponseIn,
   Results,
+  ScheduleRechecksIn,
+  ScheduleRechecksOut,
   StudentInfo,
   SubmitResult,
+  TransferItem,
+  TransferItemIn,
+  TransferReport,
 } from "./types";
 
 export class ApiError extends Error {
@@ -143,6 +149,17 @@ export const api = {
       { teacher: token },
       35000
     ),
+  // Riddle 4: does the understanding travel and last?
+  addTransferItem: (classId: number, token: string, questionId: number, body: TransferItemIn) =>
+    request<TransferItem>(
+      "POST", `/classes/${classId}/questions/${questionId}/transfer-items`, body, { teacher: token }
+    ),
+  scheduleRechecks: (classId: number, token: string, body: ScheduleRechecksIn) =>
+    request<ScheduleRechecksOut>("POST", `/classes/${classId}/rechecks`, body, { teacher: token }),
+  getTransferReport: (classId: number, token: string) =>
+    request<TransferReport>("GET", `/classes/${classId}/transfer`, undefined, { teacher: token }),
+  answerRecheck: (token: string, recheckId: number, body: RecheckAnswerIn) =>
+    request<{ status: "done" }>("POST", `/rechecks/${recheckId}/answer`, body, { student: token }, 45000),
   aiClassSummary: (classId: number, token: string) =>
     request<AISummaryOut>(
       "POST",

@@ -1,4 +1,4 @@
-import type { Confidence, Label, Source, Status } from "../api/types";
+import type { Confidence, Label, Source, Status, Verdict } from "../api/types";
 
 export function labelText(label: Label, misconceptionLabel?: string | null): string {
   switch (label) {
@@ -98,3 +98,27 @@ export function confidenceText(conf: Confidence): string {
       return "Guessed";
   }
 }
+
+// Riddle 4: what a re-check in a changed situation, without the tool, shows.
+export function verdictText(verdict: Verdict): string {
+  switch (verdict) {
+    case "lasting":
+      return "Learned — travelled and lasted";
+    case "travelled":
+      return "Travelled — check again later";
+    case "unconvincing":
+      return "Right answer, reasoning not shown";
+    case "did_not_travel":
+      return "Didn't travel";
+    case "pending":
+      return "Waiting for the check-in";
+  }
+}
+
+export const verdictColor: Record<Verdict, string> = {
+  lasting: "bg-emerald-950/70 border-emerald-500/50 text-emerald-200",
+  travelled: "bg-sky-950/70 border-sky-500/40 text-sky-200",
+  unconvincing: "bg-amber-950/60 border-amber-600/40 text-amber-200",
+  did_not_travel: "bg-red-950/60 border-red-700/50 text-red-200",
+  pending: "bg-zinc-900 border-zinc-700 text-zinc-300",
+};
