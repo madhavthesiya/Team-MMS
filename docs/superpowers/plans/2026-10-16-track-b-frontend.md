@@ -138,8 +138,10 @@ export interface ClassInfo {
 
 export interface StudentQuestion { question_id: number; position: number; prompt: string; answer_type: AnswerType; choices: string[] }
 export interface StudentQuiz { topic: string; title: string; questions: StudentQuestion[] }
+export interface PendingFollowUp { follow_up_id: number; question_id: number; question_text: string }
 export interface StudentInfo {
-  student_id: number; nickname: string; class_name: string; quiz: StudentQuiz | null; answered_question_ids: number[];
+  student_id: number; nickname: string; class_name: string; quiz: StudentQuiz | null;
+  answered_question_ids: number[]; pending_follow_ups: PendingFollowUp[];
 }
 export interface JoinResult extends StudentInfo { student_token: string }
 
@@ -283,14 +285,24 @@ export function sourceText(source: Source): string {
 - [ ] **Step 4: `src/lib/storage.ts`**
 
 ```ts
+// localStorage can throw (private windows, blocked site data). Keep an in-memory copy so the
+// current tab stays signed in even when nothing can be persisted.
+const memory = new Map<string, string>();
+
 function read(key: string): string | null {
-  try { return localStorage.getItem(key); } catch { return null; }
+  try {
+    const value = localStorage.getItem(key);
+    if (value !== null) return value;
+  } catch { /* fall through to memory */ }
+  return memory.get(key) ?? null;
 }
 function write(key: string, value: string | null): void {
+  if (value === null) memory.delete(key);
+  else memory.set(key, value);
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
-  } catch { /* storage unavailable: app still works for this session */ }
+  } catch { /* memory copy still works for this tab */ }
 }
 
 export const storage = {
@@ -491,7 +503,9 @@ Accept: can create a 3-question quiz on a phone without horizontal scroll. Commi
   - Consent notice above the first question (once): "Your explanation is checked by an AI to help your teacher understand your thinking. Don't include personal details."
   - Inputs: answer (number/text → text input; choice → radio buttons), explanation textarea ("How did you get this? Explain in your own words."), confidence segmented control (Sure / Not sure / I guessed → `sure|unsure|guessed`). Submit disabled until answer + confidence set.
   - Submit → Spinner "Reading your reasoning…" (can take up to 10 s) → if `follow_up` → show it as "One quick question" with a reply textarea → `api.reply` → next question; else next question.
-  - 409 on submit → treat as answered and move on. Network error → ErrorBox with retry keeping the typed text.
+  - **Pending follow-ups first:** on load, if `pending_follow_ups` is non-empty, show the first one ("One quick question about Q{n}") with a reply box before any new question. A refresh mid-follow-up must land back on it.
+  - 409 on submit or a network error/timeout after submitting → re-fetch `api.me` and continue from its state (it may now have a pending follow-up). Network error before the request reached the server → ErrorBox with retry keeping the typed text.
+  - Submit/reply can take up to ~30 s server-side; client timeout is 45 s.
   - Done screen: "All done — thanks, {nickname}! Your teacher will use your explanations to plan what's next." No scores, no labels.
 
 Accept: whole flow works on a phone. Commit `feat(frontend): student flow`.

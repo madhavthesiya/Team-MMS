@@ -2,8 +2,17 @@
 
 A pure function of its inputs (no database), so tests and the eval runner call it directly.
 Every step appends a TraceStep, which the teacher sees under "Why this label?".
+
+Decision policy:
+- Settle when the AI is confident AND agrees with the rules (or the rules had no opinion).
+- Rules only look at the answer string. A follow-up reply is direct evidence about the reasoning,
+  so on the second pass a confident AI label whose quoted evidence comes FROM THE REPLY settles
+  the case even against the rule; the rule's reading is kept as a ruled-out hypothesis.
+- Otherwise: ask one follow-up (first pass) or send to the teacher as not_sure (second pass).
+- All AI calls share one time budget; when it runs out we fall back to rules / a template question.
 """
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from pydantic import ValidationError
@@ -17,12 +26,16 @@ from app.ai.prompts import (
 )
 from app.ai.schemas import AIAnalysis, AIFollowUp
 from app.domain import HypothesisOut, Label, QuestionSpec, RuleResult, Source, Status, StudentWork, TraceStep
-from app.services.guardrails import GuardedAnalysis, apply_guardrails, leaks_answer, looks_like_injection
+from app.services.guardrails import GuardedAnalysis, apply_guardrails, leaks_answer, looks_like_injection, quote_in
 from app.services.redact import redact_pii
 from app.services.rule_matcher import rule_diagnose
 
 # Rules alone are weak evidence; these certainties keep rule-only labels visibly tentative.
 RULE_CERTAINTY: dict[str, float] = {"understood": 0.5, "guessed": 0.6, "misconception": 0.6, "not_sure": 0.0}
+# Don't start an AI call with less time than this left in the budget.
+MIN_CALL_SECONDS = 2.0
+
+Clock = Callable[[], float]
 
 
 @dataclass(frozen=True)
@@ -38,6 +51,15 @@ class DiagnosisOutcome:
     follow_up_discriminates: tuple[str, ...]
     ai_available: bool
     trace: tuple[TraceStep, ...]
+
+
+class _Budget:
+    def __init__(self, seconds: float, clock: Clock):
+        self._clock = clock
+        self._deadline = clock() + seconds
+
+    def left(self) -> float:
+        return self._deadline - self._clock()
 
 
 def _ms(start: float) -> int:
@@ -84,14 +106,27 @@ def _agrees(rule: RuleResult, guarded: GuardedAnalysis) -> bool:
     return rule.label != "misconception" or rule.misconception_id == guarded.misconception_id
 
 
+def _backs_label(h: HypothesisOut, guarded: GuardedAnalysis) -> bool:
+    return h.kind == guarded.label and (guarded.label != "misconception" or h.misconception_id == guarded.misconception_id)
+
+
+def _reply_backs_label(guarded: GuardedAnalysis, reply: str | None) -> bool:
+    """True if the AI's chosen label is supported by a quote taken from the follow-up reply."""
+    return bool(reply) and any(_backs_label(h, guarded) and quote_in(h.evidence_for, reply) for h in guarded.hypotheses)
+
+
 def _analyse(
-    question: QuestionSpec, work: StudentWork, rule: RuleResult, ai: AIClient, trace: list[TraceStep]
+    question: QuestionSpec, work: StudentWork, rule: RuleResult, ai: AIClient, trace: list[TraceStep], budget: _Budget
 ) -> AIAnalysis | None:
     prompt = build_analysis_prompt(question, work, rule.is_correct)
     for attempt in (1, 2):
+        left = budget.left()
+        if left < MIN_CALL_SECONDS:
+            trace.append(TraceStep("ai_analysis", "ai", False, 0, ai.model, ANALYSIS_PROMPT_VERSION, "time budget used up"))
+            return None
         start = time.perf_counter()
         try:
-            analysis = AIAnalysis.model_validate_json(ai.generate_json(prompt, AIAnalysis))
+            analysis = AIAnalysis.model_validate_json(ai.generate_json(prompt, AIAnalysis, timeout_seconds=left))
         except AIUnavailable as exc:
             trace.append(TraceStep("ai_analysis", "ai", False, _ms(start), ai.model, ANALYSIS_PROMPT_VERSION,
                                    f"AI unavailable: {exc.kind}"))
@@ -113,11 +148,16 @@ def _follow_up(
     hypotheses: tuple[HypothesisOut, ...],
     ai: AIClient,
     trace: list[TraceStep],
+    budget: _Budget,
 ) -> str:
     template = f"Walk me through, step by step, how you got {work.answer.strip()}."
+    left = budget.left()
+    if left < MIN_CALL_SECONDS:
+        trace.append(TraceStep("follow_up", "code", True, 0, detail="no time left for the AI; used the template"))
+        return template
     start = time.perf_counter()
     try:
-        raw = ai.generate_json(build_followup_prompt(question, work, list(hypotheses)), AIFollowUp)
+        raw = ai.generate_json(build_followup_prompt(question, work, list(hypotheses)), AIFollowUp, timeout_seconds=left)
         text = AIFollowUp.model_validate_json(raw).question.strip()
     except (AIUnavailable, ValidationError):
         trace.append(TraceStep("follow_up", "code", True, _ms(start), detail="AI could not write a question; used the template"))
@@ -130,8 +170,16 @@ def _follow_up(
 
 
 def run_diagnosis(
-    question: QuestionSpec, work: StudentWork, ai: AIClient, *, threshold: float, allow_follow_up: bool
+    question: QuestionSpec,
+    work: StudentWork,
+    ai: AIClient,
+    *,
+    threshold: float,
+    allow_follow_up: bool,
+    budget_seconds: float = 30.0,
+    clock: Clock = time.monotonic,
 ) -> DiagnosisOutcome:
+    budget = _Budget(budget_seconds, clock)
     trace: list[TraceStep] = []
     work = replace(
         work,
@@ -148,7 +196,7 @@ def run_diagnosis(
         return _from_rule(rule, trace, ai_available=True, force_not_sure=True,
                           reason="possible instruction injection → not sure, teacher should look")
 
-    analysis = _analyse(question, work, rule, ai, trace)
+    analysis = _analyse(question, work, rule, ai, trace, budget)
     if analysis is None:
         return _from_rule(rule, trace, ai_available=False, reason="AI unavailable → rule-based result only")
 
@@ -157,15 +205,21 @@ def run_diagnosis(
     trace.append(TraceStep("guardrails", "code", True, _ms(start), detail="; ".join(guarded.notes) or "all evidence checked out"))
 
     confident = guarded.label != "not_sure" and guarded.certainty >= threshold
-    if confident and _agrees(rule, guarded):
-        hypotheses = tuple(
-            replace(h, status="supported")
-            if h.kind == guarded.label and h.misconception_id == guarded.misconception_id
-            else h
-            for h in guarded.hypotheses
-        )
+    agrees = _agrees(rule, guarded)
+    reply_settles = confident and not agrees and _reply_backs_label(guarded, work.follow_up_reply)
+    if confident and (agrees or reply_settles):
+        hypotheses = tuple(replace(h, status="supported") if _backs_label(h, guarded) else h for h in guarded.hypotheses)
         source: Source = "both" if rule.label == guarded.label else "ai"
-        trace.append(TraceStep("decision", "code", True, 0, detail=f"settled as '{guarded.label}' ({source})"))
+        if reply_settles:
+            ruled_out = _rule_hypothesis(rule, "ruled_out")
+            hypotheses = (
+                *(h for h in hypotheses if not (h.kind == rule.label and h.misconception_id == rule.misconception_id)),
+                ruled_out,
+            )
+            detail = f"follow-up reply supports '{guarded.label}' over the answer-pattern rule ('{rule.label}')"
+        else:
+            detail = f"settled as '{guarded.label}' ({source})"
+        trace.append(TraceStep("decision", "code", True, 0, detail=detail))
         return DiagnosisOutcome(rule.is_correct, guarded.label, guarded.certainty, source, "settled",
                                 guarded.misconception_id, hypotheses, None, (), True, tuple(trace))
 
@@ -188,7 +242,7 @@ def run_diagnosis(
         top_two = (ai_h, rule_h)
     else:
         top_two = hypotheses[:2]
-    question_text = _follow_up(question, work, rule, top_two, ai, trace)
+    question_text = _follow_up(question, work, rule, top_two, ai, trace, budget)
     trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → asked one follow-up"))
     return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "open", None, hypotheses,
                             question_text, tuple(h.kind for h in top_two), True, tuple(trace))

@@ -17,8 +17,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-flash-latest"
     database_url: str = DEFAULT_SQLITE_URL
     certainty_threshold: float = 0.7
-    ai_timeout_seconds: float = 20.0
-    rate_limit: str = "30/minute"
+    ai_timeout_seconds: float = 20.0  # max for any single model call
+    ai_budget_seconds: float = 30.0  # max for all model calls in one request (frontend waits 45 s)
+    rate_limit_public: str = "120/minute"  # per IP: create class, join (a class shares one Wi-Fi IP)
+    rate_limit_student: str = "20/minute"  # per student token: answers and follow-up replies
     frontend_dist: str = str(REPO_ROOT / "frontend" / "dist")
 
     @field_validator("database_url", mode="before")

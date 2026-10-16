@@ -43,7 +43,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="BehindTheMark API", version="1.0.0", lifespan=lifespan)
-    app.state.rate_limiter = RateLimiter.from_string(settings.rate_limit)
+    app.state.rate_limiters = {
+        "public": RateLimiter.from_string(settings.rate_limit_public),
+        "student": RateLimiter.from_string(settings.rate_limit_student),
+    }
     app.state.ai_client = build_ai_client(settings)
     app.dependency_overrides[get_settings] = lambda: settings
 

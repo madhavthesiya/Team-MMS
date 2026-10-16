@@ -1,10 +1,12 @@
-# BehindTheMark — API Contract (v1)
+# BehindTheMark — API Contract (v1.1)
+
+> v1.1: `pending_follow_ups` on join/me; submit budget is ≤30 s; rate limits split (public per IP, student per token).
 
 Shared contract between backend (Track A) and frontend (Track B). Change it only by agreement; bump the version line when you do.
 
 - Base path: `/api`. JSON in, JSON out. Times are ISO 8601 UTC.
 - Errors: `{"detail": "human readable message"}`. Validation errors are `422` with FastAPI's `{"detail": [{"loc": [...], "msg": "..."}]}`.
-- `429` → `{"detail": "Too many requests — wait a minute and try again."}`
+- `429` → `{"detail": "Too many requests — wait a minute and try again."}`. Limits: create-class/sample/join 120/min per IP; submit/reply 20/min per student token.
 - Teacher auth: header `X-Teacher-Token: <teacher_token>` (returned once, at class creation).
 - Student auth: header `X-Student-Token: <student_token>` (returned once, at join).
 
@@ -102,13 +104,18 @@ Body `{"join_code": "k7pq2m", "nickname": "Asha"}` (code case-insensitive; nickn
   "quiz": {"topic": "Fractions", "title": "...", "questions": [
     {"question_id": 1, "position": 1, "prompt": "What is 1/2 + 1/4?", "answer_type": "number", "choices": []}
   ]},
-  "answered_question_ids": []
+  "answered_question_ids": [],
+  "pending_follow_ups": []
 }
 ```
 Student quiz never includes correct answers, key ideas or misconceptions. `quiz` may be `null` (teacher hasn't set one → show "Your teacher hasn't added questions yet"). `404` unknown code.
 
 ### `GET /api/students/me` · student
 `200` → same shape as join, without `student_token`.
+
+`pending_follow_ups` lists follow-up questions still waiting for a reply, e.g.
+`[{"follow_up_id": 4, "question_id": 1, "question_text": "Can you show how you'd add 1/3 + 1/6 the same way?"}]`.
+**Frontend rule:** on load (and after any submit `409` or network error), call `me` and show pending follow-ups *before* the next unanswered question. A follow-up disappears from this list once answered, or once the teacher has reviewed that answer.
 
 ## Responses (student)
 
@@ -126,11 +133,11 @@ or, when the system wants to check its reading:
 ```json
 {"response_id": 31, "follow_up": {"follow_up_id": 4, "question_text": "Can you show how you'd add 1/3 + 1/6 the same way?"}}
 ```
-Takes 2–10 s (AI call) — show a loading state. `409` already answered; `404` question not in your class.
+Usually 2–10 s, never more than ~30 s (server-side AI budget; after that it answers with rules / a template question) — show a loading state and use a 45 s client timeout. `409` already answered (call `me` to recover any pending follow-up); `404` question not in your class.
 Student never receives correctness or labels.
 
 ### `POST /api/follow-ups/{follow_up_id}/reply` · student
-Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` already replied. `404` not yours.
+Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` already replied. `404` not yours. Same ≤30 s budget as submit. If the teacher already reviewed the answer, the reply is still saved (teacher sees it) and the teacher's reading stays.
 
 ## Results (teacher)
 
@@ -186,4 +193,4 @@ Groups: correct first, then incorrect; empty groups omitted. `rule_only_count > 
 ### `POST /api/responses/{response_id}/override` · teacher
 Body `{"label": "misread", "misconception_id": null, "note": "Talked to her — she read 1/4 as 4."}`
 `misconception_id` required when label is `misconception` (must belong to the question). note ≤500.
-`200` → updated **ResponseDetail** (new version, `source: "teacher"`, old version moves to history).
+`200` → updated **ResponseDetail** (new version, `source: "teacher"`, old version moves to history). Teacher readings are final: later student replies never replace them.

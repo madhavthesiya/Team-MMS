@@ -84,6 +84,21 @@ def test_gemini_failures_become_ai_unavailable(error, kind):
     assert exc.value.kind == kind
 
 
+def test_gemini_call_timeout_is_the_smaller_of_its_own_limit_and_the_remaining_budget():
+    client = GeminiClient("test-key", "gemini-flash-latest", 20)
+    seen = []
+
+    def capture(**kwargs):
+        seen.append(kwargs["config"].http_options.timeout)
+        return SimpleNamespace(text='{"question": "ok"}')
+
+    client._client = SimpleNamespace(models=SimpleNamespace(generate_content=capture))
+    client.generate_json("x", AIAnalysis)
+    client.generate_json("x", AIAnalysis, timeout_seconds=7.5)
+    client.generate_json("x", AIAnalysis, timeout_seconds=60)
+    assert seen == [20000, 7500, 20000]
+
+
 def test_empty_gemini_reply_is_unavailable():
     client = GeminiClient("test-key", "gemini-flash-latest", 5)
     client._client = SimpleNamespace(models=SimpleNamespace(generate_content=lambda **_: SimpleNamespace(text="")))

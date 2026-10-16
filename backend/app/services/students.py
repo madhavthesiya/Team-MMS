@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import ClassRoom, Student
-from app.schemas import StudentOut, StudentQuestionOut, StudentQuizOut
+from app.schemas import PendingFollowUpOut, StudentOut, StudentQuestionOut, StudentQuizOut
 from app.security import hash_token, new_token
 from app.services.errors import NotFoundError
 
@@ -43,4 +43,20 @@ def student_out(student: Student) -> StudentOut:
         class_name=student.classroom.name,
         quiz=student_quiz,
         answered_question_ids=sorted(r.question_id for r in student.responses),
+        pending_follow_ups=pending_follow_ups(student),
     )
+
+
+def pending_follow_ups(student: Student) -> list[PendingFollowUpOut]:
+    """Follow-ups still waiting for this student, so a refresh or lost response doesn't strand them.
+    Only the current reading counts: once a teacher has reviewed an answer, its follow-up is closed."""
+    pending = []
+    for r in sorted(student.responses, key=lambda r: r.question.position):
+        current = r.current_diagnosis
+        if current and current.status == "open" and current.follow_up and current.follow_up.student_reply is None:
+            pending.append(
+                PendingFollowUpOut(
+                    follow_up_id=current.follow_up.id, question_id=r.question_id, question_text=current.follow_up.question_text
+                )
+            )
+    return pending

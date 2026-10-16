@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
 from app.api.deps import AIDep, AppSettings, CurrentStudent, DbSession, TeacherResponse
-from app.rate_limit import rate_limited
+from app.rate_limit import limit_student
 from app.schemas import FollowUpOut, OverrideIn, ResponseDetail, ResponseIn, SubmitOut
 from app.services.diagnosis_store import override_diagnosis, submit_response
 from app.services.results import response_detail
@@ -9,7 +9,7 @@ from app.services.results import response_detail
 router = APIRouter(prefix="/api/responses", tags=["responses"])
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limited)])
+@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(limit_student)])
 def submit(body: ResponseIn, student: CurrentStudent, db: DbSession, ai: AIDep, settings: AppSettings) -> SubmitOut:
     """Student submits an answer. The response never includes correctness or a label."""
     response, follow_up = submit_response(db, student, body, ai, settings)

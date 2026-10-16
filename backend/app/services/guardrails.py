@@ -33,6 +33,12 @@ def _norm(text: str) -> str:
     return " ".join(text.casefold().split())
 
 
+def quote_in(quote: str, text: str) -> bool:
+    """True if `quote` appears in `text`, ignoring case, spacing and surrounding quote marks."""
+    q = _norm(quote).strip(_QUOTE_EDGE)
+    return bool(q) and q in _norm(text)
+
+
 def looks_like_injection(text: str) -> bool:
     """Student text that tries to instruct the model. We then skip the AI and flag it for the teacher."""
     return bool(_INJECTION.search(text))
@@ -52,7 +58,7 @@ def apply_guardrails(
     analysis: AIAnalysis, question: QuestionSpec, work: StudentWork, is_correct: bool
 ) -> GuardedAnalysis:
     valid_ids = {m.id for m in question.misconceptions}
-    student_text = _norm("\n".join([work.answer, work.explanation, work.follow_up_reply or ""]))
+    student_text = "\n".join([work.answer, work.explanation, work.follow_up_reply or ""])
     notes: list[str] = []
     kept: list[HypothesisOut] = []
 
@@ -64,8 +70,7 @@ def apply_guardrails(
         if h.kind == "misconception" and misconception_id not in valid_ids:
             notes.append("dropped 'misconception': not one of the teacher's misconceptions")
             continue
-        quote = _norm(h.evidence_quote).strip(_QUOTE_EDGE)
-        quote_found = bool(quote) and quote in student_text
+        quote_found = quote_in(h.evidence_quote, student_text)
         self_reported_guess = h.kind == "guessed" and work.self_confidence == "guessed"
         if not quote_found and not self_reported_guess:
             notes.append(f"dropped '{h.kind}': quoted evidence not found in the student's words")

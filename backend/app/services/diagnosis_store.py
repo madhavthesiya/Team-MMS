@@ -66,7 +66,8 @@ def submit_response(
 
     work = StudentWork(answer=body.answer, explanation=redact_pii(body.explanation), self_confidence=body.self_confidence)
     outcome = run_diagnosis(
-        spec_from_question(question), work, ai, threshold=settings.certainty_threshold, allow_follow_up=True
+        spec_from_question(question), work, ai, threshold=settings.certainty_threshold, allow_follow_up=True,
+        budget_seconds=settings.ai_budget_seconds,
     )
     response = Response(
         student=student,
@@ -98,6 +99,12 @@ def reply_to_follow_up(
     follow_up.answered_at = utcnow()
 
     response = follow_up.diagnosis.response
+    current = response.current_diagnosis
+    if current is not None and current.source == "teacher":
+        # Teacher readings are final. The reply is kept as evidence the teacher can see,
+        # but the AI never replaces a teacher's decision.
+        db.flush()
+        return current
     work = StudentWork(
         answer=response.answer_raw,
         explanation=response.explanation_raw,
@@ -107,7 +114,8 @@ def reply_to_follow_up(
     )
     # One follow-up only: if it is still unclear after the reply, it goes to the teacher as "not sure".
     outcome = run_diagnosis(
-        spec_from_question(response.question), work, ai, threshold=settings.certainty_threshold, allow_follow_up=False
+        spec_from_question(response.question), work, ai, threshold=settings.certainty_threshold, allow_follow_up=False,
+        budget_seconds=settings.ai_budget_seconds,
     )
     return store_outcome(db, response, outcome)
 

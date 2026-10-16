@@ -126,12 +126,19 @@ class StudentQuizOut(BaseModel):
     questions: list[StudentQuestionOut]
 
 
+class PendingFollowUpOut(BaseModel):
+    follow_up_id: int
+    question_id: int
+    question_text: str
+
+
 class StudentOut(BaseModel):
     student_id: int
     nickname: str
     class_name: str
     quiz: StudentQuizOut | None
     answered_question_ids: list[int]
+    pending_follow_ups: list[PendingFollowUpOut]
 
 
 class JoinOut(StudentOut):

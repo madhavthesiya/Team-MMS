@@ -209,3 +209,33 @@ def test_teacher_of_another_class_cannot_read_responses(client):
     s = join(client, cls["join_code"])
     rid = submit(client, s["student_token"], cls["quiz"]["questions"][0]["question_id"], "3/4", "x").json()["response_id"]
     assert client.get(f"/api/responses/{rid}", headers=teacher(other["teacher_token"])).status_code == 403
+
+
+def test_pending_follow_up_survives_a_refresh(client, fake_ai):
+    _, s, r = _follow_up_flow(client, fake_ai)
+    me = client.get("/api/students/me", headers=student(s["student_token"])).json()
+    assert me["pending_follow_ups"] == [{
+        "follow_up_id": r.json()["follow_up"]["follow_up_id"],
+        "question_id": s["quiz"]["questions"][0]["question_id"],
+        "question_text": "How would you add 1/3 and 1/6?",
+    }]
+    fake_ai.push(analysis("understood", 0.9, hyp("understood", "2/6", 0.9)))
+    client.post(f"/api/follow-ups/{me['pending_follow_ups'][0]['follow_up_id']}/reply",
+                headers=student(s["student_token"]), json={"reply": "1/3 is 2/6"})
+    assert client.get("/api/students/me", headers=student(s["student_token"])).json()["pending_follow_ups"] == []
+
+
+def test_teacher_decision_is_final_even_if_the_student_replies_later(client, fake_ai):
+    cls, s, r = _follow_up_flow(client, fake_ai)
+    rid, h = r.json()["response_id"], teacher(cls["teacher_token"])
+    client.post(f"/api/responses/{rid}/override", headers=h, json={"label": "guessed", "note": "Asked in class"})
+    assert client.get("/api/students/me", headers=student(s["student_token"])).json()["pending_follow_ups"] == []
+
+    fake_ai.push(analysis("understood", 0.95, hyp("understood", "2/6", 0.95)))
+    reply = client.post(f"/api/follow-ups/{r.json()['follow_up']['follow_up_id']}/reply",
+                        headers=student(s["student_token"]), json={"reply": "1/3 is 2/6"})
+    assert reply.status_code == 200
+    d = client.get(f"/api/responses/{rid}", headers=h).json()
+    assert (d["diagnosis"]["label"], d["diagnosis"]["source"]) == ("guessed", "teacher")
+    assert d["follow_up"]["student_reply"] == "1/3 is 2/6"  # kept as evidence for the teacher
+    assert fake_ai.queue  # the AI was not asked to re-read it

@@ -30,18 +30,32 @@ def follow_up(question: str) -> str:
     return json.dumps({"question": question})
 
 
+class FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
 class FakeAIClient:
     model = "fake-test-model"
 
-    def __init__(self) -> None:
+    def __init__(self, clock: FakeClock | None = None, seconds_per_call: float = 0.0) -> None:
         self.queue: list[str | Exception] = []
         self.prompts: list[str] = []
+        self.timeouts: list[float | None] = []
+        self._clock = clock
+        self._seconds_per_call = seconds_per_call
 
     def push(self, *items: str | Exception) -> None:
         self.queue.extend(items)
 
-    def generate_json(self, prompt: str, schema: type[BaseModel]) -> str:
+    def generate_json(self, prompt: str, schema: type[BaseModel], timeout_seconds: float | None = None) -> str:
         self.prompts.append(prompt)
+        self.timeouts.append(timeout_seconds)
+        if self._clock is not None:
+            self._clock.now += self._seconds_per_call
         if not self.queue:
             raise AIUnavailable("not_configured")
         item = self.queue.pop(0)

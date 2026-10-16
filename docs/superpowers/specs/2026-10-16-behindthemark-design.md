@@ -33,7 +33,7 @@ eval/      cases.jsonl, run_eval.py, results/
 - **One deployed service:** FastAPI serves the built React bundle. One URL, no CORS.
 - **Hosting:** Render web service (free) + UptimeRobot ping on `/health` every 5 min to avoid cold starts; upgrade to Starter ($7) if budget allows. Fallback: Hugging Face Spaces (Docker).
 - **Database:** Neon Postgres (free) in production; SQLite when `DATABASE_URL` is unset, so a clean clone runs with only `GEMINI_API_KEY`.
-- **Config:** `pydantic-settings` — `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL`, `CERTAINTY_THRESHOLD` (0.7), `AI_TIMEOUT_SECONDS` (15), `RATE_LIMIT`. No settings buried in code.
+- **Config:** `pydantic-settings` — `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL`, `CERTAINTY_THRESHOLD` (0.7), `AI_TIMEOUT_SECONDS` (20, one call), `AI_BUDGET_SECONDS` (30, all calls in a request), `RATE_LIMIT_PUBLIC` (120/min per IP), `RATE_LIMIT_STUDENT` (20/min per student token). No settings buried in code.
 - **Access (no login):** "Create class" returns a secret teacher link (random token, stored hashed) and a 6-char student join code. Students join with code + nickname. "Try sample class" creates a class from the sample quiz through the normal service layer.
 
 ## 3. Data model
@@ -56,6 +56,7 @@ AIRun          id, diagnosis_id, step, source, model, prompt_version, latency_ms
 
 - Misconceptions are entered by the teacher in the UI and stored in the DB — never in code.
 - Teacher override writes a new Diagnosis version with `source=teacher`; nothing is deleted.
+- **Teacher readings are final.** A student reply that arrives after an override is saved as evidence (visible to the teacher) but never creates a newer AI version; the follow-up stops being pending once the teacher has reviewed.
 - `AIRun` stores parsed outcomes and metadata, not raw prompts (privacy).
 
 ## 4. AI pipeline
@@ -71,11 +72,14 @@ Per submitted response:
    - `misconception_id` must belong to the question; `label`/`kind` are enums.
    - `guessed` requires evidence (self-report, or explanation contradicts answer); otherwise `not_sure`.
    - `certainty < CERTAINTY_THRESHOLD` or rule/AI disagreement → `not_sure` → step 5.
-5. **Targeted follow-up.** Gemini proposes one question that discriminates between the top two hypotheses. Code rejects any follow-up containing the correct answer and falls back to a template ("Walk me through how you got {answer}"). The reply re-runs step 3 → new Diagnosis version. Max one follow-up; still unclear → `not_sure` for the teacher.
+   - **Follow-up evidence beats the answer-pattern rule.** Rules only see the answer string. On the second pass, a confident AI label whose quoted evidence comes *from the follow-up reply* settles the case even if the rule disagrees (`source=ai`); the rule's reading is kept as a `ruled_out` hypothesis. Evidence only from the first explanation does not overrule the rule.
+5. **Targeted follow-up.** Gemini proposes one question that discriminates between the top two hypotheses. Code rejects any follow-up containing the correct answer and falls back to a template ("Walk me through how you got {answer}"). The reply re-runs step 3 → new Diagnosis version. Max one follow-up; still unclear → `not_sure` for the teacher. Pending follow-ups are returned by `GET /api/students/me`, so a refresh never strands one.
+
+**Time budget:** all model calls in one request share `AI_BUDGET_SECONDS` (30 s); each call's timeout is capped at what is left, a call is skipped with < 2 s left (rules / template question instead). The frontend waits 45 s.
 
 **Failure handling:** Gemini error / 429 / timeout → rule-based diagnosis, visibly labelled "AI unavailable — rule-based only". Never a fake AI result, never a crash.
 
-**Privacy and abuse:** regex redaction of emails and phone numbers before any Gemini call; per-IP rate limiting (slowapi); consent notice on the student screen before first submission; teacher can delete a class and all its data.
+**Privacy and abuse:** regex redaction of emails and phone numbers before any Gemini call; rate limits split so a class on one Wi-Fi IP isn't blocked: anonymous endpoints per IP (120/min), answers and replies per student token (20/min); consent notice on the student screen before first submission; teacher can delete a class and all its data.
 
 **Prompt injection:** enum labels, verbatim-quote check and rule/AI disagreement check limit what injected text can achieve; injection cases are in the eval set.
 

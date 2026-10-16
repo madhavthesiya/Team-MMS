@@ -4,6 +4,7 @@ from app.config import Settings
 from app.models import AIRun, ClassRoom, Diagnosis, FollowUp, Hypothesis, Misconception, Question, Quiz, Response, Student
 from app.rate_limit import RateLimiter
 from app.security import hash_token, new_join_code, token_matches
+from tests.helpers import create_class_with_quiz, join, submit
 
 
 def test_health_reports_ok_and_ai_not_configured(client):
@@ -34,10 +35,21 @@ def test_rate_limiter_parses_spec():
     assert (rl.max_requests, rl.window_seconds) == (30, 60)
 
 
-def test_endpoint_returns_429_over_the_limit(make_client, settings):
-    client = make_client(settings.model_copy(update={"rate_limit": "2/minute"}))
+def test_public_endpoints_return_429_over_the_ip_limit(make_client, settings):
+    client = make_client(settings.model_copy(update={"rate_limit_public": "2/minute"}))
     codes = [client.post("/api/classes", json={"name": "x"}).status_code for _ in range(3)]
     assert codes == [201, 201, 429]
+
+
+def test_classmates_on_one_wifi_ip_each_get_their_own_answer_quota(make_client, settings):
+    client = make_client(settings.model_copy(update={"rate_limit_student": "2/minute"}))
+    cls = create_class_with_quiz(client)
+    asha, ravi = join(client, cls["join_code"], "Asha"), join(client, cls["join_code"], "Ravi")
+    q1, q2 = (q["question_id"] for q in cls["quiz"]["questions"])
+    assert submit(client, asha["student_token"], q1, "3/4", "x").status_code == 201
+    assert submit(client, asha["student_token"], q2, "Yes", "x").status_code == 201
+    assert submit(client, asha["student_token"], q2, "Yes", "x").status_code == 429
+    assert submit(client, ravi["student_token"], q1, "3/4", "x").status_code == 201  # same IP, own quota
 
 
 def test_tokens_are_hashed_and_join_codes_are_readable():

@@ -18,7 +18,8 @@ def settings() -> Settings:
         _env_file=None,
         gemini_api_key="",
         database_url="sqlite://",
-        rate_limit="1000/minute",
+        rate_limit_public="1000/minute",
+        rate_limit_student="1000/minute",
         frontend_dist="__no_frontend__",
     )
 

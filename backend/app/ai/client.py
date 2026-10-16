@@ -25,7 +25,7 @@ class AIUnavailable(Exception):
 class AIClient(Protocol):
     model: str
 
-    def generate_json(self, prompt: str, schema: type[BaseModel]) -> str: ...
+    def generate_json(self, prompt: str, schema: type[BaseModel], timeout_seconds: float | None = None) -> str: ...
 
 
 def gemini_schema(schema: type[BaseModel]) -> dict[str, Any]:
@@ -48,15 +48,17 @@ def gemini_schema(schema: type[BaseModel]) -> dict[str, Any]:
 class GeminiClient:
     def __init__(self, api_key: str, model: str, timeout_seconds: float):
         self.model = model
-        self._client = genai.Client(
-            api_key=api_key, http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000))
-        )
+        self.timeout_seconds = timeout_seconds
+        self._client = genai.Client(api_key=api_key)
 
-    def generate_json(self, prompt: str, schema: type[BaseModel]) -> str:
+    def generate_json(self, prompt: str, schema: type[BaseModel], timeout_seconds: float | None = None) -> str:
+        """timeout_seconds: what's left of the caller's budget; the call never waits longer than that."""
+        timeout = min(self.timeout_seconds, timeout_seconds) if timeout_seconds is not None else self.timeout_seconds
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_json_schema=gemini_schema(schema),
             temperature=0.2,
+            http_options=types.HttpOptions(timeout=int(timeout * 1000)),
         )
         try:
             response = self._client.models.generate_content(model=self.model, contents=prompt, config=config)
@@ -76,7 +78,7 @@ class NullAIClient:
 
     model = "none"
 
-    def generate_json(self, prompt: str, schema: type[BaseModel]) -> str:
+    def generate_json(self, prompt: str, schema: type[BaseModel], timeout_seconds: float | None = None) -> str:
         raise AIUnavailable("not_configured")
 
 
