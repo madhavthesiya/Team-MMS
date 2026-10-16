@@ -14,8 +14,8 @@ def test_health_reports_ok_and_ai_not_configured(client):
 
 
 def test_hosted_postgres_url_uses_psycopg_driver():
-    s = Settings(_env_file=None, database_url="postgres://u:p@host/db")
-    assert s.sqlalchemy_url == "postgresql+psycopg://u:p@host/db"
+    s = Settings(_env_file=None, database_url="postgres://db.example.com/app")
+    assert s.sqlalchemy_url == "postgresql+psycopg://db.example.com/app"
 
 
 def test_blank_database_url_falls_back_to_sqlite():
