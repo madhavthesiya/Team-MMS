@@ -22,7 +22,7 @@ from app.services.pipeline import run_diagnosis  # noqa: E402
 from app.services.sample import load_sample_quiz  # noqa: E402
 from app.services.specs import spec_from_input  # noqa: E402
 
-LABELS = ["understood", "misread", "misconception", "guessed", "slip", "not_sure"]
+LABELS = ["understood", "misread", "misconception", "guessed", "slip", "out_of_time", "not_sure"]
 
 
 def build_specs():
@@ -51,10 +51,17 @@ def main() -> None:
 
     rows, confusion = [], collections.Counter()
     for case in cases:
+        # Riddle 2 timing facts (optional per case): recorded, never inferred by the model.
+        timing = dict(
+            timed_out=case.get("timed_out", False),
+            reported_out_of_time=case.get("ran_out_of_time", False),
+            time_spent_seconds=case.get("time_spent_seconds"),
+        )
         work = StudentWork(
             answer=case["answer"],
             explanation=case["explanation"],
             self_confidence=case["self_confidence"],
+            **timing,
         )
         spec = specs[case["question"] - 1]
         out = run_diagnosis(
@@ -73,6 +80,7 @@ def main() -> None:
                 self_confidence=case["self_confidence"],
                 follow_up_question=out.follow_up_question,
                 follow_up_reply=case["follow_up_reply"],
+                **timing,
             )
             out = run_diagnosis(
                 spec,

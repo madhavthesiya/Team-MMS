@@ -161,6 +161,7 @@ def test_eval_template_lists_every_label():
 
     from app.domain import Label
 
-    plan = pathlib.Path(__file__).resolve().parents[2] / "docs/superpowers/plans/2026-10-16-track-c-eval-ops-docs.md"
-    labels_line = re.search(r"^LABELS = \[(.*)\]$", plan.read_text(encoding="utf-8"), re.M).group(1)
-    assert {s.strip(' "') for s in labels_line.split(",")} == set(get_args(Label))
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    for path in ("eval/run_eval.py", "docs/superpowers/plans/2026-10-16-track-c-eval-ops-docs.md"):
+        labels_line = re.search(r"^LABELS = \[(.*)\]$", (repo / path).read_text(encoding="utf-8"), re.M).group(1)
+        assert {s.strip(' "') for s in labels_line.split(",")} == set(get_args(Label)), path
