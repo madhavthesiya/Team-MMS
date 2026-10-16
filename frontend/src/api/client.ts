@@ -52,9 +52,10 @@ async function request<T>(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  const apiBase = ((import.meta.env.VITE_API_URL as string) || "").replace(/\/+$/, "") + "/api";
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${apiBase}${path}`, {
       method,
       headers,
       signal: controller.signal,
