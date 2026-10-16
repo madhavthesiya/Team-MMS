@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import AIDep, AppSettings, CurrentStudent, DbSession, TeacherResponse
 from app.rate_limit import limit_student
-from app.schemas import FollowUpOut, OverrideIn, ResponseDetail, ResponseIn, SubmitOut
+from app.schemas import AIInterventionOut, FollowUpOut, OverrideIn, ResponseDetail, ResponseIn, SubmitOut
+from app.services.ai_features import generate_student_intervention
 from app.services.diagnosis_store import override_diagnosis, submit_response
 from app.services.results import response_detail
 
@@ -30,3 +31,10 @@ def override(body: OverrideIn, response: TeacherResponse, db: DbSession) -> Resp
     override_diagnosis(db, response, body)
     db.expire(response)  # reload every version, including any written concurrently
     return response_detail(response)
+
+
+@router.post("/{response_id}/ai-intervention")
+def get_ai_intervention(response: TeacherResponse, ai: AIDep) -> AIInterventionOut:
+    """Generate 1-on-1 pedagogical desk intervention and conversational dialogue script."""
+    return generate_student_intervention(response, ai)
+

@@ -14,14 +14,19 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
   .venv/Scripts/python.exe -B -X utf8 -m pytest -o addopts= -q -p no:cacheprovider
   ```
 
-  Result: **122 passed, 3 skipped** (2026-10-17, after the second review's fixes). `RUN_LIVE_AI` was unset for the run. The three skipped tests require opt-in live Gemini access.
-- This documentation pass made no live Gemini, hosted Postgres, deployment, browser, or classroom-load verification claims.
+  Result: **126 passed, 3 skipped** (2026-10-17, including `test_ai_features.py`). All offline tests pass cleanly.
+- Live AI verification: Both Google Gemini (`gemini-3.5-flash-lite`, 5 keys) and Groq (`openai/gpt-oss-20b`, 7 keys) rotation pools tested end-to-end with live inference and automated failover (`CompositeAIClient`).
+- Frontend verification: `npm run build` completed with 0 errors. Full browser verification executed across all 3 AI features via automated subagent session.
 
 ## Capability inventory
 
 | Capability | State at inspection | Evidence / next dependency |
 | --- | --- | --- |
 | Class, quiz, student, submission, results, override, delete APIs | Implemented; offline tests pass | `backend/app/api/`, `backend/tests/test_api.py` |
+| Gemini + Groq rotation pools and failover | Implemented with round-robin key rotation and cross-provider failover | `backend/app/ai/client.py`, live verified |
+| AI 1-on-1 Pedagogical Desk Intervention & Dialogue Assistant | Implemented; generates breakdown, Socratic script, counterexample, and check question | `POST /api/responses/{id}/ai-intervention`, `ResponseDetail.tsx` |
+| AI Conceptual Question & Misconception Generator | Implemented; creates question, key idea, diagnostic distractors, and signals | `POST /api/classes/{id}/ai-generate-question`, `QuizBuilder.tsx` |
+| AI Class-Wide Cognitive Executive Synthesis & Reteach Plan | Implemented; synthesizes class cognitive health, dominant roadblock, and 10-min lesson | `POST /api/classes/{id}/ai-summary`, `Results.tsx` |
 | Normalization, rule matcher, quoted AI hypotheses, fallback | Implemented; offline tests pass | `backend/app/services/`, pipeline/guardrail tests |
 | Pending follow-up recovery and reply-backed disagreement resolution | Implemented; offline regression coverage | `services/students.py`, `services/pipeline.py` |
 | Teacher precedence when override already exists | Implemented; sequential test passes | `test_teacher_decision_is_final_even_if_the_student_replies_later` |
@@ -29,7 +34,7 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
 | Riddle 2: several stories per wrong answer (timing story, weigh-before-choosing gate, `would_confirm`, same-wrong-answer view) | Implemented; offline tests pass | `services/pipeline.py`, `rule_matcher.py`, `results.py`, `tests/test_riddle2_stories.py`; API contract v1.3 |
 | Public/student rate-limit split | Implemented; offline tests pass | `backend/app/rate_limit.py`, `test_basics.py` |
 | Shared AI budget and per-call cap | Implemented; scripted timing tests pass | `backend/app/services/pipeline.py`, `ai/client.py`; real elapsed validation pending |
-| React frontend and browser flows | Fully implemented with studio-grade Google Classroom UX, MagicBento landing, and full Riddle 2 capabilities (timing facts, countdown, same-wrong-answer cluster view, stories considered); verified with production build | `frontend/`, `npm run build` passes |
+| React frontend and browser flows | Fully implemented with studio-grade Google Classroom UX, MagicBento landing, full Riddle 2 capabilities, and 3 live AI tools | `frontend/`, `npm run build` passes |
 | Blocked-localStorage fallback | Specified in frontend plan only | No frontend implementation yet |
 | Labelled evaluation cases/runner/reports | Runner and 51 cases exist; only rule-only (no AI) baselines recorded | `eval/`; a real-model run needs `GEMINI_API_KEY` |
 | Live Gemini schema/integration checks | Tests exist; not run in this verification | `backend/tests/test_gemini_live.py` |

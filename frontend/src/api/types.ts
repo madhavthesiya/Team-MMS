@@ -248,3 +248,65 @@ export interface OverrideIn {
   misconception_id: number | null;
   note: string;
 }
+
+export interface ScriptTurn {
+  teacher_prompt: string;
+  anticipated_student_thinking: string;
+}
+
+export interface AIInterventionOut {
+  student_nickname: string;
+  diagnosed_label: string;
+  misconception_name: string | null;
+  misconception_breakdown: string;
+  one_on_one_script: ScriptTurn[];
+  concrete_counterexample: string;
+  check_for_understanding_question: string;
+  generated_by_model: string;
+}
+
+export interface AIGenerateQuestionIn {
+  topic: string;
+  grade_level?: string;
+  misconception_focus?: string;
+}
+
+export interface AIMisconceptionDraft {
+  label: string;
+  trigger_answers: string[];
+  signal_text: string;
+  remedy_hint: string;
+}
+
+export interface AIGenerateQuestionOut {
+  prompt: string;
+  correct_answer: string;
+  answer_type: AnswerType;
+  key_idea: string;
+  choices: string[];
+  misconceptions: AIMisconceptionDraft[];
+  time_limit_seconds: number;
+}
+
+export interface DifferentiatedGroup {
+  group_name: string;
+  focus_story: string;
+  student_count: number;
+  student_nicknames: string[];
+  suggested_action: string;
+}
+
+export interface AISummaryOut {
+  class_name: string;
+  quiz_topic: string;
+  total_students: number;
+  correct_count: number;
+  accuracy_percentage: number;
+  executive_summary: string;
+  dominant_misconception: string;
+  undercover_guessers_warning: string;
+  ten_minute_reteach_plan: string[];
+  differentiated_groups: DifferentiatedGroup[];
+  generated_by_model: string;
+}
+

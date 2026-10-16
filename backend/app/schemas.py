@@ -306,3 +306,67 @@ class OverrideIn(BaseModel):
     label: Label
     misconception_id: int | None = None
     note: OptStr500 = ""
+
+
+# ---------- AI Features ----------
+
+class ScriptTurn(BaseModel):
+    teacher_prompt: str
+    anticipated_student_thinking: str
+
+
+class AIInterventionOut(BaseModel):
+    student_nickname: str
+    diagnosed_label: str
+    misconception_name: str | None
+    misconception_breakdown: str
+    one_on_one_script: list[ScriptTurn]
+    concrete_counterexample: str
+    check_for_understanding_question: str
+    generated_by_model: str
+
+
+class AIGenerateQuestionIn(BaseModel):
+    topic: Str100
+    grade_level: Str80 = "Middle School"
+    misconception_focus: OptStr500 = ""
+
+
+class AIMisconceptionDraft(BaseModel):
+    label: str
+    trigger_answers: list[str] = Field(default_factory=list)
+    signal_text: str = ""
+    remedy_hint: str = ""
+
+
+class AIGenerateQuestionOut(BaseModel):
+    prompt: str
+    correct_answer: str
+    answer_type: AnswerType
+    key_idea: str
+    choices: list[str] = Field(default_factory=list)
+    misconceptions: list[AIMisconceptionDraft] = Field(default_factory=list)
+    time_limit_seconds: int = 90
+
+
+class DifferentiatedGroup(BaseModel):
+    group_name: str
+    focus_story: str
+    student_count: int
+    student_nicknames: list[str]
+    suggested_action: str
+
+
+class AISummaryOut(BaseModel):
+    class_name: str
+    quiz_topic: str
+    total_students: int
+    correct_count: int
+    accuracy_percentage: float
+    executive_summary: str
+    dominant_misconception: str
+    undercover_guessers_warning: str
+    ten_minute_reteach_plan: list[str]
+    differentiated_groups: list[DifferentiatedGroup]
+    generated_by_model: str
+

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTeacherToken } from "../../lib/useTeacherToken";
 import { api, ApiError } from "../../api/client";
-import type { AnswerType, QuestionIn, QuizIn } from "../../api/types";
+import type { AnswerType, QuestionIn, QuizIn, AIGenerateQuestionOut } from "../../api/types";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
 import { Button } from "../../components/ui/Button";
@@ -20,6 +20,8 @@ import {
   Lightbulb,
   ListPlus,
   Layers,
+  X,
+  Wand2,
 } from "lucide-react";
 
 interface QuestionFormState extends Omit<QuestionIn, "misconceptions"> {
@@ -61,6 +63,69 @@ export default function QuizBuilder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // AI Question Generator Modal State
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiGradeLevel, setAiGradeLevel] = useState("Middle School");
+  const [aiFocus, setAiFocus] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGenError, setAiGenError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AIGenerateQuestionOut | null>(null);
+
+  async function handleAIGenerate() {
+    if (!classId || !token) return;
+    const targetTopic = (aiTopic || topic).trim();
+    if (!targetTopic) {
+      setAiGenError("Please provide a topic for the AI to analyze.");
+      return;
+    }
+    setAiGenerating(true);
+    setAiGenError(null);
+    try {
+      const generated = await api.aiGenerateQuestion(classId, token, {
+        topic: targetTopic,
+        grade_level: aiGradeLevel,
+        misconception_focus: aiFocus.trim(),
+      });
+      setAiResult(generated);
+    } catch (err: unknown) {
+      setAiGenError(err instanceof Error ? err.message : "Failed to generate diagnostic question.");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
+  function applyGeneratedQuestion(mode: "new" | "replace") {
+    if (!aiResult) return;
+    const formatted: QuestionFormState = {
+      prompt: aiResult.prompt,
+      correct_answer: aiResult.correct_answer,
+      answer_type: aiResult.answer_type,
+      key_idea: aiResult.key_idea,
+      choices: aiResult.choices || [],
+      time_limit_seconds: aiResult.time_limit_seconds || 90,
+      misconceptions: aiResult.misconceptions.map((m) => ({
+        label: m.label,
+        triggersText: m.trigger_answers.join(", "),
+        signal_text: m.signal_text,
+        remedy_hint: m.remedy_hint,
+      })),
+    };
+
+    if (mode === "new") {
+      const nextQuestions = [...questions, formatted];
+      setQuestions(nextQuestions);
+      setActiveQuestionIndex(nextQuestions.length - 1);
+    } else {
+      const nextQuestions = [...questions];
+      nextQuestions[activeQuestionIndex] = formatted;
+      setQuestions(nextQuestions);
+    }
+    setAiModalOpen(false);
+    setAiResult(null);
+    setMobileTab("edit");
+  }
 
   useEffect(() => {
     async function init() {
@@ -331,8 +396,20 @@ export default function QuizBuilder() {
           </span>
         </div>
 
-        {/* Save Controls */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Save & AI Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setAiTopic(topic);
+              setAiModalOpen(true);
+            }}
+            icon={<Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+            className="border border-violet-500/30 bg-violet-950/20 hover:bg-violet-900/30 text-violet-200"
+          >
+            AI Generator
+          </Button>
           <Button
             variant="primary"
             size="sm"
@@ -382,13 +459,28 @@ export default function QuizBuilder() {
                 Questions ({questions.length}/20)
               </span>
             </div>
-            <button
-              onClick={addQuestion}
-              className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-white hover:bg-zinc-200 text-black font-semibold transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAiTopic(topic);
+                  setAiModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium shadow-sm transition-all cursor-pointer"
+                title="Generate with Gemini & Groq"
+              >
+                <Sparkles className="w-3 h-3 text-amber-300" />
+                <span>AI</span>
+              </button>
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-white hover:bg-zinc-200 text-black font-semibold transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add</span>
+              </button>
+            </div>
           </div>
 
           {/* Quiz Settings Mini Panel */}
@@ -789,6 +881,172 @@ export default function QuizBuilder() {
           </div>
         </div>
       </div>
+
+      {/* AI Question Generator Modal */}
+      {aiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-zinc-950 border border-violet-500/30 shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    AI Conceptual Question Generator
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                      Gemini + Groq
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Generates diagnostic questions with cognitive distractors & researched misconceptions
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {aiGenError && (
+                <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs">
+                  {aiGenError}
+                </div>
+              )}
+
+              {/* Input Form */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <Input
+                      label="Learning Objective / Topic *"
+                      value={aiTopic}
+                      onChange={(e) => setAiTopic(e.target.value)}
+                      placeholder="e.g. Newton's Third Law & Normal Force"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 block mb-1">
+                      Target Level
+                    </label>
+                    <select
+                      value={aiGradeLevel}
+                      onChange={(e) => setAiGradeLevel(e.target.value)}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-colors"
+                    >
+                      <option value="Elementary (Grades 3-5)">Elementary (Grades 3-5)</option>
+                      <option value="Middle School (Grades 6-8)">Middle School (Grades 6-8)</option>
+                      <option value="High School (Grades 9-12)">High School (Grades 9-12)</option>
+                      <option value="College / Advanced">College / Advanced</option>
+                    </select>
+                  </div>
+                </div>
+
+                <Textarea
+                  label="Specific Cognitive Trap / Misconception to Target (Optional)"
+                  value={aiFocus}
+                  onChange={(e) => setAiFocus(e.target.value)}
+                  placeholder="e.g. Students confuse normal force with gravitational reaction force, or assume heavy objects fall faster"
+                  rows={2}
+                />
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleAIGenerate}
+                    loading={aiGenerating}
+                    loadingText="Generating Pedagogical Question…"
+                    icon={<Wand2 className="w-4 h-4" />}
+                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0"
+                  >
+                    Generate Diagnostic Question
+                  </Button>
+                </div>
+              </div>
+
+              {/* Result Preview */}
+              {aiResult && (
+                <div className="p-4 rounded-xl bg-violet-950/20 border border-violet-500/30 space-y-4 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-violet-500/20 pb-2">
+                    <span className="text-xs font-mono uppercase tracking-wider text-violet-300 font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-violet-400" />
+                      Generated Diagnostic Question
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-400">
+                      Type: {aiResult.answer_type} • Timer: {aiResult.time_limit_seconds}s
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-zinc-400 block mb-0.5">Prompt:</span>
+                    <p className="text-sm font-medium text-white leading-relaxed">{aiResult.prompt}</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-lg bg-zinc-900/80 border border-white/5">
+                      <span className="text-[10px] font-mono uppercase text-emerald-400 block mb-0.5">Correct Answer:</span>
+                      <span className="font-semibold text-white">{aiResult.correct_answer}</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-zinc-900/80 border border-white/5">
+                      <span className="text-[10px] font-mono uppercase text-indigo-400 block mb-0.5">Key Concept Idea:</span>
+                      <span className="text-zinc-300">{aiResult.key_idea}</span>
+                    </div>
+                  </div>
+
+                  {aiResult.misconceptions && aiResult.misconceptions.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-mono uppercase text-amber-400 block">
+                        Diagnostic Misconceptions ({aiResult.misconceptions.length}):
+                      </span>
+                      <div className="space-y-1.5">
+                        {aiResult.misconceptions.map((m, idx) => (
+                          <div key={idx} className="p-2.5 rounded-lg bg-zinc-900/60 border border-white/5 text-xs space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-white">{m.label}</span>
+                              <span className="text-[10px] font-mono text-amber-300">
+                                Triggers: {m.trigger_answers.join(", ") || "n/a"}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-400 italic">Signal: "{m.signal_text}"</p>
+                            <p className="text-[11px] text-zinc-300">💡 Remedy: {m.remedy_hint}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-violet-500/20">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => applyGeneratedQuestion("replace")}
+                    >
+                      Replace Current Q{activeQuestionIndex + 1}
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => applyGeneratedQuestion("new")}
+                      className="bg-violet-600 hover:bg-violet-500"
+                    >
+                      Insert as New Question
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

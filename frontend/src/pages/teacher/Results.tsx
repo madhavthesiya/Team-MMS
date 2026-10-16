@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTeacherToken } from "../../lib/useTeacherToken";
 import { api } from "../../api/client";
-import type { Results as ResultsType } from "../../api/types";
+import type { Results as ResultsType, AISummaryOut } from "../../api/types";
 import { labelText } from "../../lib/labels";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
@@ -18,6 +18,10 @@ import {
   CheckCircle2,
   XCircle,
   ChevronRight,
+  AlertTriangle,
+  TrendingUp,
+  X,
+  BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -29,6 +33,27 @@ export default function Results() {
   const [error, setError] = useState<string | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [mobileTab, setMobileTab] = useState<"questions" | "detail">("detail");
+
+  // AI Class Executive Synthesis State
+  const [aiSummary, setAiSummary] = useState<AISummaryOut | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+
+  async function handleGenerateSummary() {
+    if (!classId || !token) return;
+    setLoadingSummary(true);
+    setSummaryError(null);
+    try {
+      const summary = await api.aiClassSummary(classId, token);
+      setAiSummary(summary);
+      setShowSummaryModal(true);
+    } catch (err: unknown) {
+      setSummaryError(err instanceof Error ? err.message : "Failed to generate class AI summary.");
+    } finally {
+      setLoadingSummary(false);
+    }
+  }
 
   async function loadResults(isRefresh = false) {
     if (!classId || !token) return;
@@ -105,16 +130,29 @@ export default function Results() {
           </span>
         </div>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => loadResults(true)}
-          loading={refreshing}
-          loadingText="Refreshing…"
-          icon={<RefreshCw className="w-3.5 h-3.5" />}
-        >
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGenerateSummary}
+            loading={loadingSummary}
+            loadingText="Synthesizing Class…"
+            icon={<Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+            className="border border-violet-500/30 bg-violet-950/20 hover:bg-violet-900/30 text-violet-200"
+          >
+            AI Executive Synthesis
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => loadResults(true)}
+            loading={refreshing}
+            loadingText="Refreshing…"
+            icon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* AI rule-only warning if any */}
@@ -441,6 +479,152 @@ export default function Results() {
                 </div>
               </motion.div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* AI Executive Synthesis Modal */}
+      {showSummaryModal && aiSummary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-zinc-950 border border-violet-500/30 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    Class Cognitive Executive Synthesis
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                      {aiSummary.generated_by_model}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Topic: {aiSummary.quiz_topic} • Accuracy: {aiSummary.accuracy_percentage}% ({aiSummary.correct_count}/{aiSummary.total_students})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSummaryModal(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {summaryError && (
+                <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs">
+                  {summaryError}
+                </div>
+              )}
+
+              {/* Executive Assessment */}
+              <div className="p-4 rounded-xl bg-zinc-900/80 border border-white/10 space-y-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400 font-bold block flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Pedagogical Executive Assessment
+                </span>
+                <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-line">
+                  {aiSummary.executive_summary}
+                </p>
+              </div>
+
+              {/* Dominant Misconception Roadblock */}
+              <div className="p-4 rounded-xl bg-red-950/20 border border-red-500/30 space-y-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-red-400 font-bold block flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Dominant Cognitive Roadblock in Classroom
+                </span>
+                <p className="text-xs text-red-100/90 leading-relaxed font-medium">
+                  {aiSummary.dominant_misconception}
+                </p>
+              </div>
+
+              {/* Undercover Guessers Warning (Riddle 1) */}
+              <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Riddle 1 Alert • Undercover Guessers (Right Answer, Wrong Reason)
+                </span>
+                <p className="text-xs text-amber-100/90 leading-relaxed">
+                  {aiSummary.undercover_guessers_warning}
+                </p>
+              </div>
+
+              {/* 10-Minute Next-Lesson Reteach Strategy */}
+              <div className="space-y-2.5">
+                <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-violet-400" />
+                  10-Minute Next-Lesson Warm-Up Reteach Plan
+                </span>
+
+                <div className="space-y-2">
+                  {aiSummary.ten_minute_reteach_plan.map((step, sIdx) => (
+                    <div key={sIdx} className="p-3.5 rounded-xl bg-zinc-900/60 border border-white/10 flex items-start gap-3">
+                      <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-violet-600 text-white shrink-0 mt-0.5">
+                        Step {sIdx + 1}
+                      </span>
+                      <p className="text-xs text-white leading-relaxed">
+                        {step}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Differentiated Student Action Groups */}
+              {aiSummary.differentiated_groups && aiSummary.differentiated_groups.length > 0 && (
+                <div className="space-y-2.5">
+                  <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-violet-400" />
+                    Differentiated Small-Group Directives
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {aiSummary.differentiated_groups.map((grp, gIdx) => (
+                      <div key={gIdx} className="p-3.5 rounded-xl bg-zinc-900/60 border border-white/10 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-white text-xs">{grp.group_name}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-white/5">
+                            {grp.student_count} student{grp.student_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400">
+                          Focus Story: <span className="text-zinc-200 capitalize font-mono">{grp.focus_story}</span>
+                        </p>
+                        {grp.student_nicknames && grp.student_nicknames.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {grp.student_nicknames.map((nick, nIdx) => (
+                              <span key={nIdx} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-300">
+                                {nick}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[11px] text-indigo-300 bg-indigo-950/20 p-2 rounded-lg border border-indigo-500/20">
+                          🎯 {grp.suggested_action}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-white/10 flex justify-end bg-zinc-900/50">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowSummaryModal(false)}
+              >
+                Close Plan
+              </Button>
+            </div>
           </div>
         </div>
       )}

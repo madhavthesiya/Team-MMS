@@ -9,4 +9,11 @@ router = APIRouter(prefix="/api", tags=["health"])
 @router.get("/health")
 def health(db: DbSession, settings: AppSettings) -> dict:
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "db": "ok", "ai_configured": bool(settings.gemini_api_key)}
+    configured = bool(settings.get_gemini_keys() or settings.get_groq_keys())
+    return {
+        "status": "ok",
+        "db": "ok",
+        "ai_configured": configured,
+    }
+
+

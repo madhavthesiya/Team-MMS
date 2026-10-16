@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore")
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-flash-latest"
+    gemini_api_keys: str = ""
+    gemini_model: str = "gemini-3.5-flash-lite"
+    groq_api_key: str = ""
+    groq_api_keys: str = ""
+    groq_model: str = "openai/gpt-oss-20b"
     database_url: str = DEFAULT_SQLITE_URL
     certainty_threshold: float = 0.7
     ai_timeout_seconds: float = 20.0  # max for any single model call
@@ -22,6 +26,18 @@ class Settings(BaseSettings):
     rate_limit_public: str = "120/minute"  # per IP: create class, join (a class shares one Wi-Fi IP)
     rate_limit_student: str = "20/minute"  # per student token: answers and follow-up replies
     frontend_dist: str = str(REPO_ROOT / "frontend" / "dist")
+
+    def get_gemini_keys(self) -> list[str]:
+        keys = [k.strip() for k in self.gemini_api_keys.split(",") if k.strip()]
+        if self.gemini_api_key and self.gemini_api_key not in keys:
+            keys.insert(0, self.gemini_api_key)
+        return keys
+
+    def get_groq_keys(self) -> list[str]:
+        keys = [k.strip() for k in self.groq_api_keys.split(",") if k.strip()]
+        if self.groq_api_key and self.groq_api_key not in keys:
+            keys.insert(0, self.groq_api_key)
+        return keys
 
     @field_validator("database_url", mode="before")
     @classmethod

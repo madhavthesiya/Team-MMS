@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTeacherToken } from "../../lib/useTeacherToken";
 import { api } from "../../api/client";
-import type { Label, OverrideIn, ResponseDetail as ResponseDetailType } from "../../api/types";
+import type { Label, OverrideIn, ResponseDetail as ResponseDetailType, AIInterventionOut } from "../../api/types";
 import { sourceText, confidenceText } from "../../lib/labels";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
@@ -23,6 +23,12 @@ import {
   Send,
   MessageSquare,
   FileText,
+  Sparkles,
+  Copy,
+  Check,
+  Wand2,
+  HelpCircle,
+  Quote,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -45,6 +51,36 @@ export default function ResponseDetail() {
   const [overriding, setOverriding] = useState(false);
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [overrideSuccess, setOverrideSuccess] = useState(false);
+
+  // AI 1-on-1 Intervention State
+  const [intervention, setIntervention] = useState<AIInterventionOut | null>(null);
+  const [loadingIntervention, setLoadingIntervention] = useState(false);
+  const [interventionError, setInterventionError] = useState<string | null>(null);
+  const [copiedScript, setCopiedScript] = useState(false);
+
+  async function handleGenerateIntervention() {
+    if (!responseId || !token) return;
+    setLoadingIntervention(true);
+    setInterventionError(null);
+    try {
+      const data = await api.aiIntervention(responseId, token);
+      setIntervention(data);
+    } catch (err: unknown) {
+      setInterventionError(err instanceof Error ? err.message : "Failed to generate AI intervention.");
+    } finally {
+      setLoadingIntervention(false);
+    }
+  }
+
+  function copyDialogueScript() {
+    if (!intervention) return;
+    const text = intervention.one_on_one_script
+      .map((t, idx) => `Step ${idx + 1}:\nTeacher: "${t.teacher_prompt}"\nStudent (${intervention.student_nickname}): "${t.anticipated_student_thinking}"`)
+      .join("\n\n");
+    navigator.clipboard.writeText(text);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2500);
+  }
 
   async function loadDetail() {
     if (!responseId || !token) return;
@@ -378,6 +414,151 @@ export default function ResponseDetail() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* AI Pedagogical Desk Intervention & 1-on-1 Dialogue Assistant */}
+          <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-violet-500/30 bg-violet-950/10 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-violet-500/20 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-heading text-white flex items-center gap-2">
+                    1-on-1 Pedagogical Desk Intervention
+                    {intervention && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                        {intervention.generated_by_model}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Targeted dialogue script, counterexample & verification question for {detail.nickname}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                {!intervention ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleGenerateIntervention}
+                    loading={loadingIntervention}
+                    loadingText="Crafting Intervention…"
+                    icon={<Wand2 className="w-3.5 h-3.5" />}
+                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0"
+                  >
+                    Generate Intervention Plan
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyDialogueScript}
+                      icon={copiedScript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      className="border border-white/10"
+                    >
+                      {copiedScript ? "Copied Script!" : "Copy Script"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleGenerateIntervention}
+                      loading={loadingIntervention}
+                      icon={<Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+                    >
+                      Regenerate
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {interventionError && (
+              <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs">
+                {interventionError}
+              </div>
+            )}
+
+            {!intervention && !loadingIntervention && (
+              <div className="p-4 rounded-xl bg-black/40 border border-white/5 text-center space-y-2">
+                <Quote className="w-6 h-6 text-violet-400 mx-auto opacity-70" />
+                <p className="text-xs text-zinc-300 max-w-md mx-auto">
+                  Click above to generate a customized 2-minute Socratic dialogue plan tailored specifically to {detail.nickname}'s cognitive reasoning on this question.
+                </p>
+              </div>
+            )}
+
+            {intervention && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Cognitive Misconception Breakdown */}
+                <div className="p-4 rounded-xl bg-zinc-950/80 border border-white/10 space-y-1.5">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400 font-bold block">
+                    Cognitive Breakdown • What the Student is Thinking
+                  </span>
+                  <p className="text-xs text-zinc-200 leading-relaxed">
+                    {intervention.misconception_breakdown}
+                  </p>
+                </div>
+
+                {/* 1-on-1 Conversational Dialogue Script */}
+                <div className="space-y-2.5">
+                  <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-violet-400" />
+                    Conversational Desk Script ({intervention.one_on_one_script.length} Guided Turns)
+                  </span>
+
+                  <div className="space-y-3">
+                    {intervention.one_on_one_script.map((turn, tIdx) => (
+                      <div key={tIdx} className="p-3.5 rounded-xl bg-zinc-900/60 border border-white/10 space-y-2">
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-violet-600 text-white shrink-0 mt-0.5">
+                            Teacher Ask #{tIdx + 1}
+                          </span>
+                          <p className="text-xs text-white font-medium leading-relaxed">
+                            "{turn.teacher_prompt}"
+                          </p>
+                        </div>
+
+                        <div className="flex items-start gap-2.5 pl-3 border-l-2 border-indigo-500/40 mt-2">
+                          <span className="text-[10px] font-mono text-zinc-400 uppercase shrink-0 mt-0.5">
+                            Student Realization:
+                          </span>
+                          <p className="text-xs text-zinc-400 italic leading-relaxed">
+                            {turn.anticipated_student_thinking}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Concrete Counterexample & Verification Question */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      Concrete Counter-Example
+                    </span>
+                    <p className="text-xs text-emerald-100/90 leading-relaxed">
+                      {intervention.concrete_counterexample}
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/30 space-y-1.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Check for Understanding
+                    </span>
+                    <p className="text-xs text-indigo-100/90 leading-relaxed">
+                      {intervention.check_for_understanding_question}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
