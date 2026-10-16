@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from "react";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -9,52 +9,33 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, icon, rightElement, className = "", id, ...props }, ref) => {
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
-
+  ({ label, error, hint, icon, rightElement, className = "", id,
+     "aria-describedby": describedBy, "aria-invalid": invalid, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id || "input-" + generatedId;
+    const hintId = inputId + "-hint";
+    const errorId = inputId + "-error";
+    const description = [describedBy, error ? errorId : hint ? hintId : null].filter(Boolean).join(" ") || undefined;
     return (
-      <div className="w-full space-y-1.5">
-        {label && (
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor={inputId}
-              className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 font-mono"
-            >
-              {label}
-            </label>
-          </div>
-        )}
+      <div className="ui-field">
+        {label && <label htmlFor={inputId} className="ui-field-label">{label}</label>}
         <div className="relative flex items-center">
-          {icon && (
-            <div className="absolute left-3.5 text-zinc-500 pointer-events-none flex items-center">
-              {icon}
-            </div>
-          )}
+          {icon && <div className="absolute left-3.5 text-zinc-400 pointer-events-none flex items-center" aria-hidden="true">{icon}</div>}
           <input
             ref={ref}
             id={inputId}
-            className={[
-              "w-full rounded-xl border bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 transition-all outline-none",
-              "border-white/10 focus:border-white focus:ring-1 focus:ring-white/20",
-              error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "",
-              icon ? "pl-10" : "",
-              rightElement ? "pr-10" : "",
-              className,
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            aria-describedby={description}
+            aria-invalid={error ? true : invalid}
+            className={["ui-control", icon ? "pl-11" : "", rightElement ? "pr-12" : "", className].filter(Boolean).join(" ")}
             {...props}
           />
-          {rightElement && (
-            <div className="absolute right-3 text-zinc-400 flex items-center">{rightElement}</div>
-          )}
+          {rightElement && <div className="absolute right-3 text-zinc-400 flex items-center">{rightElement}</div>}
         </div>
-        {error && <p className="text-xs text-red-400 font-medium">{error}</p>}
-        {hint && !error && <p className="text-[11px] text-zinc-400">{hint}</p>}
+        {error && <p id={errorId} role="alert" className="ui-field-error">{error}</p>}
+        {hint && !error && <p id={hintId} className="ui-field-hint">{hint}</p>}
       </div>
     );
   }
 );
-
 Input.displayName = "Input";
 export default Input;

@@ -1,10 +1,19 @@
 # Project status
 
-**Inspected:** 2026-10-17, Riddle 3 implementation originally on `7df970e`, integrated with `origin/main` at `a5a0cfc` on branch `codex/riddle-3-optional-checks` for review.
+**Latest inspection:** 2026-10-17, shared UI polish over Claude's `98ca870` on `riddle-4-transfer`. Earlier Riddle 3 integration evidence is preserved below.
 
 This is a point-in-time handoff. Recheck the current branch, filesystem, and tests before treating an item as current. Unchecked steps in an older implementation plan are not a reliable implementation inventory.
 
-## Verified baseline
+## Shared UI polish verification — 2026-10-17
+
+- Responsive navigation, calmer landing layout, generated brand assets, readable shared controls, field associations, keyboard tabs and focus-managed dialogs are implemented. [UI handoff](ui-polish.md) and [brand assets/prompt](brand.md).
+- `npm run build` passes; main JS is 587.40 kB (172.53 kB gzip), with the >500 kB warning still present. `npm run lint` exits successfully with 24 existing warnings outside the changed shared/landing components.
+- Offline backend suite: **175 passed, 3 skipped** in 17.25 s on `98ca870` plus the UI working tree. Live AI was disabled. This does not independently verify Claude's live/model or Riddle 4 browser claims.
+- `tests/browser_ui_polish.cjs --verify` passes for seven routes at 1440 px and 360 px, including duplicate-ID/overflow/runtime-error checks, keyboard navigation, mobile menu, teacher hash preservation, projector dialog focus containment/restoration and Escape cleanup. Screenshots were visually inspected. Isolated in-memory test API and scripted model only.
+- Backend, API and Riddle 4 behavior are untouched by this UI pass; the question-editor change only wraps its heading/actions on narrow screens. Remaining boundaries and reproduction instructions are in the UI handoff.
+- Combined review with Riddle 4 (Claude, 2026-10-17, on `riddle-4-transfer`): landing gains a fourth workflow card (check that it travelled; 4/2/1 columns), the Riddle 4 delay field uses the shared field styles, and the results action strip wraps at 360 px so Refresh is no longer clipped. `npm run build` and `npm run lint` pass; `browser_ui_polish.cjs --verify` 14/14 and `browser_riddle4.cjs` 2/2 pass on the combined tree; offline backend suite 175 passed, 3 skipped. Committed together with Riddle 4.
+
+## Earlier Riddle 3 verified baseline
 
 - Backend: FastAPI, SQLAlchemy, Pydantic settings, Gemini transport, and the synthetic sample quiz are present.
 - API contract: version 1.4, including optional diagnostic checks and learner declines, with teacher-only rationale and predicted observations.

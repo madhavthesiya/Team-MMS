@@ -184,12 +184,12 @@ export function TransferPanel({ classId, token, questionId }: { classId: number;
           ) : (
             <div className="space-y-3 p-4 rounded-xl bg-black/40 border border-white/10">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="w-full space-y-1.5">
-                  <span className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 font-mono">Re-check opens</span>
+                <label className="ui-field">
+                  <span className="ui-field-label">Re-check opens</span>
                   <select
                     value={delay}
                     onChange={(e) => setDelay(Number(e.target.value))}
-                    className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+                    className="ui-control"
                   >
                     {DELAYS.map((d) => <option key={d.days} value={d.days}>{d.label}</option>)}
                   </select>

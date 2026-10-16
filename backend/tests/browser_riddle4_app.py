@@ -15,7 +15,7 @@ app = create_app(Settings(
     rate_limit_public="1000/minute", rate_limit_student="1000/minute",
 ))
 fake_ai = FakeAIClient()
-for _ in range(4):
+for _ in range(20):  # enough for repeated runs against one server (2 widths per run)
     # first answer (settles as understood), then the check-in (explanation shows the key idea)
     fake_ai.push(analysis("understood", 0.9, hyp("understood", "2/4", 0.9)),
                  analysis("understood", 0.9, hyp("understood", "both tenths", 0.9)))

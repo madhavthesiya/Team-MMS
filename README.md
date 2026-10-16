@@ -143,6 +143,7 @@ docker run -p 8000:8000 --env-file .env behindthemark
 - [Architecture](docs/architecture.md) — module map, request flow, evidence/versions, decision and failure policy
 - [Security and student data](SECURITY.md) — access boundaries, data handling, known limits
 - [Status](docs/status.md) — dated verification record and open issues
+- [UI/UX handoff](docs/ui-polish.md) and [brand assets](docs/brand.md) — shared design/accessibility changes, checks and logo prompt
 - [Design spec](docs/superpowers/specs/2026-10-16-behindthemark-design.md) — product intent and riddle responses
 - [Contributing](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) — workflow for people and coding agents
 

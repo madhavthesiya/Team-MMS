@@ -17,7 +17,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "bg-white text-black font-bold hover:bg-zinc-200 active:scale-[0.98] shadow-md shadow-white/10 border border-white",
+    "bg-white text-black font-semibold hover:bg-zinc-200 border border-white shadow-sm",
   secondary:
     "bg-zinc-900 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-white font-medium active:scale-[0.98]",
   outline:
@@ -29,9 +29,9 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-xs rounded-lg gap-1.5",
-  md: "px-4 py-2 text-sm rounded-xl gap-2",
-  lg: "px-6 py-3 text-base rounded-xl gap-2.5",
+  sm: "min-h-10 px-3 py-2 text-xs rounded-lg gap-1.5",
+  md: "min-h-11 px-4 py-2.5 text-sm rounded-lg gap-2",
+  lg: "min-h-12 px-5 py-3 text-sm rounded-xl gap-2.5",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -53,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const base =
-      "inline-flex items-center justify-center font-sans transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none select-none outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+      "inline-flex items-center justify-center font-sans leading-snug transition-colors duration-150 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed select-none focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white";
 
     const resolvedLeftIcon = icon || leftIcon;
     const resolvedRightIcon = iconRight || rightIcon;
@@ -62,12 +62,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         className={[base, VARIANTS[variant], SIZES[size], className].filter(Boolean).join(" ")}
         {...props}
       >
         {loading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin text-current" />
+            <Loader2 className="w-4 h-4 animate-spin text-current" aria-hidden="true" />
             <span>{loadingText || children}</span>
           </>
         ) : (

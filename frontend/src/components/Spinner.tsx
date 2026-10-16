@@ -1,39 +1,12 @@
-import { Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
-
-export function Spinner({
-  text = "Loading…",
-  subtext,
-  variant = "default",
-}: {
-  text?: string;
-  subtext?: string;
-  variant?: "default" | "ai";
+export function Spinner({ text = "Loading…", subtext, variant = "default" }: {
+  text?: string; subtext?: string; variant?: "default" | "ai";
 }) {
   return (
-    <div
-      role="status"
-      className="flex flex-col items-center justify-center py-12 px-4 text-center"
-    >
-      <div className="relative flex items-center justify-center mb-4">
-        {variant === "ai" ? (
-          <>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2.4, ease: "linear" }}
-              className="w-14 h-14 rounded-full border-2 border-white/10 border-t-white border-r-white/50"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white animate-pulse" />
-            </div>
-          </>
-        ) : (
-          <div className="w-10 h-10 rounded-full border-2 border-zinc-800 border-t-white animate-spin" />
-        )}
-      </div>
-
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center py-10 px-5 text-center">
+      <div aria-hidden="true" className={["mb-5 rounded-full border-2 border-zinc-700 border-t-zinc-100 animate-spin",
+        variant === "ai" ? "w-11 h-11" : "w-9 h-9"].join(" ")} />
       <p className="text-sm font-medium text-white">{text}</p>
-      {subtext && <p className="text-xs text-zinc-400 mt-1 max-w-sm">{subtext}</p>}
+      {subtext && <p className="text-sm leading-relaxed text-zinc-400 mt-2 max-w-sm">{subtext}</p>}
     </div>
   );
 }
