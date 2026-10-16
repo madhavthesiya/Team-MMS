@@ -132,3 +132,15 @@ docker run -p 8000:8000 --env-file .env behindthemark
 - **Shane** &mdash; Architecture & Backend Pipeline (Track A)
 - **Frontend Lead** &mdash; UI, SPA & React Flow (Track B)
 - **Madhav Thesiya** &mdash; Eval Suite, Cloud Infrastructure, Docker & Documentation (Track C)
+
+---
+
+## 9. Documentation
+
+- [API contract](docs/api-contract.md) — every endpoint, request/response shape and error
+- [Architecture](docs/architecture.md) — module map, request flow, evidence/versions, decision and failure policy
+- [Security and student data](SECURITY.md) — access boundaries, data handling, known limits
+- [Status](docs/status.md) — dated verification record and open issues
+- [Design spec](docs/superpowers/specs/2026-10-16-behindthemark-design.md) — product intent and riddle responses
+- [Contributing](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) — workflow for people and coding agents
+
