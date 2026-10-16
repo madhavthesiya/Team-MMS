@@ -1,8 +1,11 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Menu, RotateCw, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "../api/client";
 import { Brand } from "./Brand";
+import SwarmCursor from "./SwarmCursor";
+
 
 const navigation = [
   { to: "/", label: "Overview" },
@@ -48,12 +51,42 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell relative">
+      {/* Precision ambient lighting & subtle micro-dot grid */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-white/[0.03] rounded-full blur-[140px]" />
+        <div className="absolute top-[35%] -right-[10%] w-[500px] h-[500px] bg-zinc-800/[0.1] rounded-full blur-[150px]" />
+        <div className="absolute -bottom-[20%] left-[10%] w-[600px] h-[600px] bg-white/[0.02] rounded-full blur-[160px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+      </div>
+
+      {/* Interactive GPU Swarm Cursor Overlay */}
+      <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
+        <SwarmCursor
+          count={260}
+          size={2.0}
+          shape="dot"
+          color="#f4f4f5"
+          accentColor="#a1a1aa"
+          spread={65}
+          speed={0.9}
+          swirl={0.5}
+          tail={0.4}
+          trail={0.6}
+          wander={0.3}
+          depth={0.6}
+          clickEffect="burst"
+          targets="a, button, [role='button'], input, select, textarea, [data-swarm-target]"
+          hideCursor={false}
+          className="h-full w-full pointer-events-none"
+        />
+      </div>
+
       <a className="skip-link" href="#main-content" onClick={(event) => {
         event.preventDefault();
         document.getElementById("main-content")?.focus();
       }}>Skip to content</a>
-      <header className="app-header">
+      <header className="app-header relative z-40">
         <div className="app-header-inner">
           <Link to="/" className="brand-link" aria-label="BehindTheMark home" onClick={() => setOpenPath(null)}>
             <Brand />
@@ -101,9 +134,20 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
       </header>
 
-      <main id="main-content" tabIndex={-1} className={isLanding ? "app-main landing-scroll" : "app-main"}>
+      <main id="main-content" tabIndex={-1} className={isLanding ? "app-main landing-scroll relative z-10" : "app-main relative z-10"}>
         <div className={isLanding ? "landing-container" : ["app-workspace", isEntry ? "is-entry" : ""].join(" ")}>
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
+              className={isLanding ? "w-full" : "h-full flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden"}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
           {isLanding && (
             <footer className="landing-footer">
               <span>BehindTheMark</span>
@@ -114,7 +158,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </main>
       {!isLanding && (
-        <footer className="workspace-footer">
+        <footer className="workspace-footer relative z-20">
           <span>Beyond the score.</span>
           <span>Teacher-led understanding</span>
         </footer>
@@ -122,3 +166,4 @@ export function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+

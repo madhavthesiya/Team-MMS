@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, BookOpen, Check, Fingerprint, FlaskConical, MessageSquare, Route, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen, Check, Fingerprint, FlaskConical, MessageSquare, Route, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { api } from "../api/client";
 import { storage } from "../lib/storage";
 import { Button } from "../components/ui/Button";
@@ -34,7 +34,10 @@ export default function Landing() {
     <div className="landing-page">
       <section className="hero-grid" aria-labelledby="hero-heading">
         <div className="hero-copy">
-          <p className="eyebrow"><span className="eyebrow-line" /> A clearer picture of learning</p>
+          <p className="eyebrow">
+            <span className="eyebrow-line" /> A clearer picture of learning
+            <Sparkles size={13} className="text-white/80 animate-pulse ml-1" aria-hidden="true" />
+          </p>
           <h1 id="hero-heading">Same score.<br /><span>Different story.</span></h1>
           <p className="hero-description">
             An answer tells you what. A learner’s reasoning helps you understand why.
@@ -63,6 +66,25 @@ export default function Landing() {
             <span className="reasoning-card-icon"><MessageSquare size={19} aria-hidden="true" /></span>
           </div>
           <div className="reasoning-card-title">A mark is a starting point.<br /><span>Not the whole picture.</span></div>
+
+          {/* Duality Case Contrast */}
+          <div className="grid grid-cols-2 gap-2.5 my-4">
+            <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-white/10 hover:border-white/20 transition-all">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-white">Asha (7/10)</span>
+                <span className="text-[10px] text-emerald-300 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/40">Understood</span>
+              </div>
+              <p className="text-[10px] text-zinc-400 font-mono mt-1 truncate">"converted 1/2 to 2/4"</p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-zinc-950/90 border border-white/5 hover:border-white/15 transition-all">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-zinc-300">Leo (7/10)</span>
+                <span className="text-[10px] text-amber-300 bg-amber-950/70 px-1.5 py-0.5 rounded border border-amber-800/40">Adds across</span>
+              </div>
+              <p className="text-[10px] text-zinc-500 font-mono mt-1 truncate">"1+1 is 2, 2+4 is 6"</p>
+            </div>
+          </div>
+
           <div className="reasoning-layers">
             {[
               { label: "The answer", detail: "What did the learner submit?", icon: BookOpen },
