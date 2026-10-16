@@ -1,0 +1,472 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api, ApiError } from "../../api/client";
+import { storage } from "../../lib/storage";
+import type { Confidence, StudentInfo, StudentQuestion } from "../../api/types";
+import { Spinner } from "../../components/Spinner";
+import { ErrorBox } from "../../components/ErrorBox";
+import { EmptyState } from "../../components/EmptyState";
+import { Button } from "../../components/ui/Button";
+import { Textarea } from "../../components/ui/Textarea";
+import { Input } from "../../components/ui/Input";
+import {
+  Send,
+  CheckCircle2,
+  MessageSquare,
+  Brain,
+  Shield,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import confetti from "canvas-confetti";
+
+export default function StudentQuiz() {
+  const navigate = useNavigate();
+  const token = storage.studentToken();
+
+  const [info, setInfo] = useState<StudentInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Form input state
+  const [answer, setAnswer] = useState("");
+  const [explanation, setExplanation] = useState("");
+  const [confidence, setConfidence] = useState<Confidence | "">("");
+
+  // Submitting response
+  const [submitting, setSubmitting] = useState(false);
+
+  // Follow-up state
+  const [activeFollowUp, setActiveFollowUp] = useState<{
+    follow_up_id: number;
+    question_text: string;
+  } | null>(null);
+  const [followUpReply, setFollowUpReply] = useState("");
+  const [replying, setReplying] = useState(false);
+
+  async function loadMe() {
+    if (!token) {
+      navigate("/join");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.me(token);
+      setInfo(data);
+
+      if (data.pending_follow_ups && data.pending_follow_ups.length > 0) {
+        const first = data.pending_follow_ups[0];
+        setActiveFollowUp({
+          follow_up_id: first.follow_up_id,
+          question_text: first.question_text,
+        });
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load session.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMe();
+  }, [token]);
+
+  const currentQuestion: StudentQuestion | null = (() => {
+    if (!info || !info.quiz || activeFollowUp) return null;
+    const answeredSet = new Set(info.answered_question_ids);
+    return info.quiz.questions.find((q) => !answeredSet.has(q.question_id)) || null;
+  })();
+
+  const isCompleted =
+    info &&
+    info.quiz &&
+    !activeFollowUp &&
+    info.answered_question_ids.length >= info.quiz.questions.length;
+
+  useEffect(() => {
+    if (isCompleted) {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    }
+  }, [isCompleted]);
+
+  async function handleSubmitResponse(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || !currentQuestion || !confidence || !answer.trim()) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await api.submit(token, {
+        question_id: currentQuestion.question_id,
+        answer: answer.trim(),
+        explanation: explanation.trim(),
+        self_confidence: confidence as Confidence,
+      });
+
+      setAnswer("");
+      setExplanation("");
+      setConfidence("");
+
+      if (res.follow_up) {
+        setActiveFollowUp(res.follow_up);
+      } else {
+        const updated = await api.me(token);
+        setInfo(updated);
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 409) {
+        await loadMe();
+      } else {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Could not submit your answer. Please check your connection and try again."
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleReplySubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || !activeFollowUp || !followUpReply.trim()) return;
+
+    setReplying(true);
+    setError(null);
+
+    try {
+      await api.reply(token, activeFollowUp.follow_up_id, followUpReply.trim());
+      setActiveFollowUp(null);
+      setFollowUpReply("");
+      const updated = await api.me(token);
+      setInfo(updated);
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 409) {
+        setActiveFollowUp(null);
+        await loadMe();
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to send your reply.");
+      }
+    } finally {
+      setReplying(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Spinner text="Connecting to your class…" variant="ai" />
+      </div>
+    );
+  }
+
+  if (error && !info) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <ErrorBox message={error} onRetry={loadMe} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!info || !info.quiz) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <EmptyState title="Your teacher hasn't added questions yet.">
+          <p>Please check back once your teacher has configured the quiz.</p>
+        </EmptyState>
+      </div>
+    );
+  }
+
+  // Done Celebration Screen
+  if (isCompleted) {
+    return (
+      <div className="h-full flex-1 min-h-0 flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full text-center space-y-6"
+        >
+          <div className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center mx-auto shadow-xl shadow-white/10">
+            <CheckCircle2 className="w-9 h-9 text-black" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-white">
+              All done — thanks, {info.nickname}!
+            </h1>
+            <p className="text-zinc-300 text-sm leading-relaxed max-w-sm mx-auto">
+              Your explanations will help your teacher understand your thinking and plan the best next
+              steps for your learning.
+            </p>
+          </div>
+
+          <div className="glass-panel-subtle rounded-2xl p-5 border border-white/10 text-xs text-zinc-400">
+            <p>You may now close this window or tell your teacher you have finished.</p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex-1 min-h-0 min-w-0 flex flex-col justify-between max-w-2xl mx-auto w-full px-4 sm:px-6 py-4 overflow-hidden">
+      {/* Google Classroom-Inspired Assignment Top Bar */}
+      <div className="shrink-0 flex items-center justify-between pb-3 border-b border-white/10 gap-3">
+        <div className="min-w-0">
+          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+            {info.class_name} • Diagnostic Assignment
+          </span>
+          <h2 className="text-sm sm:text-base font-bold text-white font-heading truncate">
+            {info.quiz.title}
+          </h2>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[11px] font-mono font-semibold text-emerald-300">
+            Assigned
+          </span>
+          <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono text-zinc-300">
+            {info.nickname}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="shrink-0 pt-2">
+          <ErrorBox message={error} onRetry={() => setError(null)} />
+        </div>
+      )}
+
+      {/* Center Assessment Container (Independently Scrollable) */}
+      <div className="flex-1 min-h-0 overflow-y-auto py-4 space-y-4">
+        {/* Follow-up question mode */}
+        {activeFollowUp ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/20 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center gap-2 text-white">
+              <MessageSquare className="w-4 h-4 text-white" />
+              <h3 className="text-sm font-bold font-heading text-white">
+                One Quick Clarification Question
+              </h3>
+            </div>
+
+            <p className="text-sm font-medium text-zinc-200 leading-relaxed bg-black/60 p-4 rounded-xl border border-white/10">
+              "{activeFollowUp.question_text}"
+            </p>
+
+            <form onSubmit={handleReplySubmit} className="space-y-4">
+              <Textarea
+                label="Your Clarification / Explanation"
+                rows={3}
+                required
+                maxLength={1000}
+                value={followUpReply}
+                onChange={(e) => setFollowUpReply(e.target.value)}
+                placeholder="Walk through your reasoning step-by-step…"
+                disabled={replying}
+              />
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                disabled={replying || !followUpReply.trim()}
+                loading={replying}
+                loadingText="Reading your reply…"
+                icon={<Send className="w-3.5 h-3.5" />}
+                className="w-full"
+              >
+                Send Clarification
+              </Button>
+            </form>
+          </motion.div>
+        ) : currentQuestion ? (
+          <motion.div
+            key={currentQuestion.question_id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            {/* Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
+                <span>
+                  Question {currentQuestion.position} of {info.quiz.questions.length}
+                </span>
+                <span className="text-zinc-300">
+                  {Math.round(
+                    (info.answered_question_ids.length / info.quiz.questions.length) * 100
+                  )}
+                  % completed
+                </span>
+              </div>
+              <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-1.5 rounded-full bg-white transition-all duration-300"
+                  style={{
+                    width: `${
+                      (info.answered_question_ids.length / info.quiz.questions.length) * 100
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Privacy notice for first question */}
+            {info.answered_question_ids.length === 0 && (
+              <div className="rounded-xl border border-white/10 bg-zinc-950/80 p-3 text-xs text-zinc-400 flex items-start gap-2.5">
+                <Shield className="w-4 h-4 text-zinc-300 shrink-0 mt-0.5" />
+                <span>
+                  Your explanation is analyzed by pedagogical AI guardrails to help your teacher
+                  understand your thinking. Avoid personal names or sensitive information.
+                </span>
+              </div>
+            )}
+
+            {/* Question Card & Form */}
+            <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 shadow-2xl space-y-5">
+              <div>
+                <span className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                  Question {currentQuestion.position}
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-white font-heading leading-snug">
+                  {currentQuestion.prompt}
+                </h3>
+              </div>
+
+              <form onSubmit={handleSubmitResponse} id="student-quiz-form" className="space-y-5">
+                {/* Answer Input */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 font-mono mb-2">
+                    Your Answer *
+                  </label>
+                  {currentQuestion.answer_type === "choice" ? (
+                    <div className="space-y-2">
+                      {currentQuestion.choices.map((choice, idx) => (
+                        <label
+                          key={idx}
+                          className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                            answer === choice
+                              ? "border-white bg-white text-black font-semibold shadow-md shadow-white/10"
+                              : "border-white/10 bg-zinc-950/60 hover:border-white/20 text-zinc-200"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="choice-answer"
+                            value={choice}
+                            checked={answer === choice}
+                            onChange={(e) => setAnswer(e.target.value)}
+                            className={answer === choice ? "accent-black" : "accent-white"}
+                          />
+                          <span className="text-sm font-medium">{choice}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <Input
+                      required
+                      maxLength={100}
+                      value={answer}
+                      onChange={(e) => setAnswer(e.target.value)}
+                      placeholder="Enter your final answer…"
+                      disabled={submitting}
+                      className="font-mono text-base"
+                    />
+                  )}
+                </div>
+
+                {/* Explanation Input */}
+                <div>
+                  <Textarea
+                    label="Explain Your Reasoning *"
+                    rows={3}
+                    required
+                    maxLength={2000}
+                    value={explanation}
+                    onChange={(e) => setExplanation(e.target.value)}
+                    placeholder="Describe step-by-step how you reached this answer…"
+                    disabled={submitting}
+                    hint="Write in your own words — your teacher uses this to see how you think."
+                  />
+                </div>
+
+                {/* Confidence Buttons */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 font-mono mb-2">
+                    How confident are you in this answer? *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { value: "sure", label: "Sure", desc: "I know this concept" },
+                        { value: "unsure", label: "Unsure", desc: "Not completely sure" },
+                        { value: "guessed", label: "Guessed", desc: "Just a lucky guess" },
+                      ] as const
+                    ).map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setConfidence(item.value)}
+                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                          confidence === item.value
+                            ? "border-white bg-white text-black shadow-sm font-bold"
+                            : "border-white/10 bg-zinc-950/80 hover:bg-zinc-900 text-zinc-300"
+                        }`}
+                      >
+                        <span className="block text-xs sm:text-sm font-semibold">{item.label}</span>
+                        <span
+                          className={`block text-[10px] mt-0.5 ${
+                            confidence === item.value ? "text-zinc-700" : "text-zinc-500"
+                          }`}
+                        >
+                          {item.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        ) : null}
+      </div>
+
+      {/* Sticky Bottom Actions Bar */}
+      {currentQuestion && !activeFollowUp && (
+        <div className="shrink-0 pt-3 border-t border-white/10 flex items-center justify-between gap-4">
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-500 font-mono">
+            <Brain className="w-3.5 h-3.5 text-zinc-400" />
+            <span>AI diagnostic guardrails ready</span>
+          </div>
+
+          <Button
+            type="submit"
+            form="student-quiz-form"
+            variant="primary"
+            size="md"
+            disabled={submitting || !answer.trim() || !explanation.trim() || !confidence}
+            loading={submitting}
+            loadingText="Evaluating Reasoning…"
+            iconRight={<Send className="w-3.5 h-3.5" />}
+            className="w-full sm:w-auto px-6"
+          >
+            Turn In (Submit Answer)
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
