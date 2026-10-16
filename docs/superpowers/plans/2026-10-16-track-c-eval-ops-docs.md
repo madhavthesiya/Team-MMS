@@ -341,7 +341,7 @@ Two students both score 7/10. One understood and slipped; one guessed. The mark 
 ## How each riddle shaped the project
 - **Riddle 1 — The Same Number:** evidence (answer, explanation, confidence) stored separately from interpretation (versioned diagnosis); results split same-score students by reason.
 - **Riddle 2 — One Error, Several Stories:** the same wrong answer can come from a mistaken rule, a missed condition, or running out of time. We added a "ran out of time" story that rests only on recorded timing (per-question timer with auto-submit, an "I ran out of time" tick) — never on AI inference. For every wrong answer the AI must weigh all stories and say what would confirm each; code refuses to choose a story unless at least three were weighed and the chosen one is clearly ahead (otherwise one follow-up separates them). The teacher sees "3 students answered 1/5 — 3 different stories" and, per response, every story considered with its evidence, the reason it was ruled out, and what would confirm it.
-- **Riddle 3 — <title>:** <what changed>
+- **Riddle 3 — The Question That Separates:** strict one-question limit (`MAX_FOLLOW_UPS = 1`) preventing student fatigue; one targeted discriminator question probes competing hypotheses without revealing the answer key; purpose is understanding rather than scoring (`is_correct` immutable); the teacher decides what comes next via authoritative overrides.
 - **Riddle 4 — <title>:** <what changed>
 
 ## How the AI works (and when it doesn't)
