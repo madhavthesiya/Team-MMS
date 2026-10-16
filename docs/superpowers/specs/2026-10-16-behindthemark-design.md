@@ -47,11 +47,11 @@ Student        id, class_id, nickname, created_at
 Response       id, student_id, question_id, answer_raw, explanation_raw,
                self_confidence(sure|unsure|guessed), is_correct, created_at        -- immutable
 Diagnosis      id, response_id, version, label, certainty, source(rule|ai|both|teacher),
-               status(open|settled|not_sure), superseded_by, created_at             -- versioned
+               status(open|settled|not_sure), note, created_at  -- versioned; current = highest version
 Hypothesis     id, diagnosis_id, kind(understood|misread|misconception|guessed|slip),
                misconception_id?, evidence_for, evidence_against, likelihood, status(open|supported|ruled_out)
 FollowUp       id, diagnosis_id, question_text, discriminates[], student_reply, answered_at
-AIRun          id, diagnosis_id, step, source, model, prompt_version, latency_ms, ok, error_kind
+AIRun          id, diagnosis_id, step, source, model, prompt_version, latency_ms, ok, detail
 ```
 
 - Misconceptions are entered by the teacher in the UI and stored in the DB — never in code.
