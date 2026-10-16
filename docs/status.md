@@ -29,7 +29,7 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
 | Riddle 2: several stories per wrong answer (timing story, weigh-before-choosing gate, `would_confirm`, same-wrong-answer view) | Implemented; offline tests pass | `services/pipeline.py`, `rule_matcher.py`, `results.py`, `tests/test_riddle2_stories.py`; API contract v1.3 |
 | Public/student rate-limit split | Implemented; offline tests pass | `backend/app/rate_limit.py`, `test_basics.py` |
 | Shared AI budget and per-call cap | Implemented; scripted timing tests pass | `backend/app/services/pipeline.py`, `ai/client.py`; real elapsed validation pending |
-| React frontend and browser flows | Vite scaffold only (default template); no app screens yet | `frontend/`; Track B plan |
+| React frontend and browser flows | Fully implemented with studio-grade Google Classroom UX, MagicBento landing, and full Riddle 2 capabilities (timing facts, countdown, same-wrong-answer cluster view, stories considered); verified with production build | `frontend/`, `npm run build` passes |
 | Blocked-localStorage fallback | Specified in frontend plan only | No frontend implementation yet |
 | Labelled evaluation cases/runner/reports | Runner and 51 cases exist; only rule-only (no AI) baselines recorded | `eval/`; a real-model run needs `GEMINI_API_KEY` |
 | Live Gemini schema/integration checks | Tests exist; not run in this verification | `backend/tests/test_gemini_live.py` |
