@@ -18,6 +18,9 @@ ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("responses", "timed_out", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("responses", "reported_out_of_time", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("hypotheses", "would_confirm", "TEXT NOT NULL DEFAULT ''"),
+    ("follow_ups", "rationale", "TEXT NOT NULL DEFAULT ''"),
+    ("follow_ups", "expected_evidence", "JSON NOT NULL DEFAULT '[]'"),
+    ("follow_ups", "declined_reason", "VARCHAR(24) NOT NULL DEFAULT ''"),
 ]
 DIAGNOSIS_VERSION_INDEX = "uq_diagnoses_response_version"
 

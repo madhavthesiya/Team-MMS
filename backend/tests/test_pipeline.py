@@ -55,7 +55,7 @@ def test_follow_up_that_reveals_the_answer_is_replaced_by_template():
     ai = FakeAIClient()
     ai.push(analysis("slip", 0.8, hyp("slip", "hmm", 0.8)), follow_up("Did you mean 0.75?"))
     out = run(work, ai)
-    assert out.follow_up_question == "Walk me through, step by step, how you got 2/6."
+    assert out.follow_up_question == "Which rule did you use, and what would you check in your working?"
 
 
 def test_low_certainty_triggers_follow_up():
@@ -107,7 +107,7 @@ def test_ai_outage_during_follow_up_uses_template():
     ai = FakeAIClient()
     ai.push(analysis("guessed", 0.8, hyp("guessed", "it looked right", 0.8)), AIUnavailable("timeout"))
     out = run(work, ai)
-    assert out.follow_up_question == "Walk me through, step by step, how you got 3/4."
+    assert out.follow_up_question == "What makes your method work on another example?"
 
 
 # ---------- follow-up evidence can overrule the answer-pattern rule ----------
@@ -174,5 +174,5 @@ def test_follow_up_falls_back_to_template_when_analysis_used_the_budget():
     work = StudentWork(answer="3/4", explanation="it looked right", self_confidence="sure")
     ai.push(analysis("guessed", 0.8, hyp("guessed", "it looked right", 0.8)), follow_up("never asked"))
     out = run_diagnosis(Q, work, ai, threshold=0.7, allow_follow_up=True, budget_seconds=30, clock=clock)
-    assert out.follow_up_question == "Walk me through, step by step, how you got 3/4."
+    assert out.follow_up_question == "What makes your method work on another example?"
     assert len(ai.prompts) == 1

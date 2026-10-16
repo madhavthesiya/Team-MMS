@@ -29,5 +29,17 @@ class AIAnalysis(BaseModel):
     misconception_id: int | None = None
 
 
-class AIFollowUp(BaseModel):
+class AIExpectedEvidence(BaseModel):
+    kind: HypothesisKind
+    misconception_id: int | None = None
+    observation: str = Field(min_length=1, max_length=300)
+
+
+class AIFollowUpCandidate(BaseModel):
     question: str = Field(min_length=1, max_length=400)
+    rationale: str = Field(default="", max_length=500)
+    expected_evidence: list[AIExpectedEvidence] = Field(default_factory=list, max_length=2)
+
+
+class AIFollowUp(AIFollowUpCandidate):
+    alternatives: list[AIFollowUpCandidate] = Field(default_factory=list, max_length=2)

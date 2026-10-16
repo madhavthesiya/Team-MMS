@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { storage } from "../../lib/storage";
-import type { Confidence, StudentInfo, StudentQuestion } from "../../api/types";
+import type { Confidence, DeclineReason, StudentInfo, StudentQuestion } from "../../api/types";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
 import { EmptyState } from "../../components/EmptyState";
@@ -45,6 +45,7 @@ export default function StudentQuiz() {
   const [activeFollowUp, setActiveFollowUp] = useState<{
     follow_up_id: number;
     question_text: string;
+    reply_saved?: boolean;
   } | null>(null);
   const [followUpReply, setFollowUpReply] = useState("");
   const [replying, setReplying] = useState(false);
@@ -57,27 +58,22 @@ export default function StudentQuiz() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.me(token);
-      setInfo(data);
-
-      if (data.pending_follow_ups && data.pending_follow_ups.length > 0) {
+      let data = await api.me(token);
+      if (data.pending_follow_ups.length > 0) {
         const first = data.pending_follow_ups[0];
         // Riddle 2: if a reply was saved earlier but processing did not complete, resume it
         if (first.reply_saved) {
           try {
             await api.resumeFollowUp(token, first.follow_up_id);
-            const refreshed = await api.me(token);
-            setInfo(refreshed);
-            return;
+            data = await api.me(token);
           } catch {
-            // Fall through to display pending follow-up if resume call fails
+            // Never ask for an already-saved reply again or allow it to be declined.
+            setError("Your reply is saved. Finishing it did not complete; please retry below.");
           }
         }
-        setActiveFollowUp({
-          follow_up_id: first.follow_up_id,
-          question_text: first.question_text,
-        });
       }
+      setInfo(data);
+      setActiveFollowUp(data.pending_follow_ups[0] ?? null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load session.");
     } finally {
@@ -260,6 +256,26 @@ export default function StudentQuiz() {
         await loadMe();
       } else {
         setError(err instanceof Error ? err.message : "Failed to send your reply.");
+      }
+    } finally {
+      setReplying(false);
+    }
+  }
+
+  async function handleDecline(reason: DeclineReason) {
+    if (!token || !activeFollowUp || replying) return;
+    setReplying(true);
+    setError(null);
+    try {
+      await api.declineFollowUp(token, activeFollowUp.follow_up_id, reason);
+      setFollowUpReply("");
+      await loadMe();
+    } catch (err: unknown) {
+      if (err instanceof ApiError && [0, 408, 409].includes(err.status)) {
+        // The choice may have reached the server even if its response was lost.
+        await loadMe();
+      } else {
+        setError(err instanceof Error ? err.message : "Could not save your choice. Please retry.");
       }
     } finally {
       setReplying(false);
@@ -476,7 +492,7 @@ export default function StudentQuiz() {
               <div className="flex items-center gap-2 text-white">
                 <MessageSquare className="w-4 h-4 text-white" />
                 <h3 className="text-sm font-bold font-heading text-white">
-                  One Quick Clarification Question
+                  One optional check — not another score
                 </h3>
               </div>
 
@@ -484,7 +500,18 @@ export default function StudentQuiz() {
                 "{activeFollowUp.question_text}"
               </p>
 
-              <form onSubmit={handleReplySubmit} className="space-y-4">
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                A short reply is enough. You can say you are not sure, skip this check, or ask
+                to talk with your teacher. None of these choices will change your original answer.
+                Your teacher decides what comes next.
+              </p>
+
+              {activeFollowUp.reply_saved ? (
+                <div role="status" className="space-y-3">
+                  <p className="text-sm text-zinc-300">Your reply is saved. No need to answer again.</p>
+                  <Button type="button" onClick={loadMe} disabled={replying}>Retry finishing saved reply</Button>
+                </div>
+              ) : <form onSubmit={handleReplySubmit} className="space-y-4">
                 <Textarea
                   label="Your Clarification / Explanation"
                   rows={3}
@@ -492,7 +519,7 @@ export default function StudentQuiz() {
                   maxLength={1000}
                   value={followUpReply}
                   onChange={(e) => setFollowUpReply(e.target.value)}
-                  placeholder="Walk through your reasoning step-by-step…"
+                  placeholder="Share a short reply in your own words…"
                   disabled={replying}
                 />
 
@@ -508,7 +535,18 @@ export default function StudentQuiz() {
                 >
                   Send Clarification
                 </Button>
-              </form>
+                <div className="flex flex-wrap gap-2 border-t border-white/10 pt-3">
+                  <Button type="button" variant="outline" disabled={replying} onClick={() => handleDecline("not_sure")}>
+                    I’m not sure
+                  </Button>
+                  <Button type="button" variant="outline" disabled={replying} onClick={() => handleDecline("skip")}>
+                    Skip this check
+                  </Button>
+                  <Button type="button" variant="ghost" disabled={replying} onClick={() => handleDecline("teacher")}>
+                    Discuss with my teacher
+                  </Button>
+                </div>
+              </form>}
             </motion.div>
           ) : currentQuestion ? (
             <motion.div

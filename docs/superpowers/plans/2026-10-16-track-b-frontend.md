@@ -520,6 +520,7 @@ Accept: can create a 3-question quiz on a phone without horizontal scroll. Commi
   - Inputs: answer (number/text → text input; choice → radio buttons), explanation textarea ("How did you get this? Explain in your own words."), confidence segmented control (Sure / Not sure / I guessed → `sure|unsure|guessed`), and a tick box "I ran out of time" (`ran_out_of_time`). Submit disabled until answer + confidence set.
   - Timing (Riddle 2): start a clock when the question appears; send `time_spent_seconds` (whole seconds) on submit. If the question has `time_limit_seconds`, show a visible countdown; at zero, auto-submit whatever is typed with `timed_out: true` (blank answer → send "-" to meet the 1-char minimum; confidence defaults to `unsure`). Never auto-submit on questions without a timer.
   - Submit → Spinner "Reading your reasoning…" (can take up to 10 s) → if `follow_up` → show it as "One quick question" with a reply textarea → `api.reply` → next question; else next question.
+  - Riddle 3 / API v1.4: the check is optional and untimed. Offer “I’m not sure”, “Skip this check”, “Discuss with my teacher” via `declineFollowUp`; then recover `me`. Do not interpret a decline as guessing. See [the Riddle 3 delta](2026-10-17-riddle-3.md).
   - **Pending follow-ups first:** on load, if `pending_follow_ups` is non-empty, handle the first one before any new question. `reply_saved: false` → show it ("One quick question about Q{n}") with a reply box. `reply_saved: true` → show "Finishing up…" and call `api.resume`, then re-fetch `me`. A refresh mid-follow-up must land back on it.
   - 409 on submit or a network error/timeout after submitting → re-fetch `api.me` and continue from its state (it may now have a pending follow-up). Network error before the request reached the server → ErrorBox with retry keeping the typed text.
   - Submit/reply can take up to ~30 s server-side; client timeout is 45 s.
@@ -541,6 +542,7 @@ Accept: whole flow works on a phone. Commit `feat(frontend): student flow`.
   - "Stories considered" list (Riddle 2: a mistake is a clue, not a verdict) — show every hypothesis, grouped: **Chosen** (`supported`), **Still possible** (`open`), **Ruled out** (`ruled_out`). Each shows: story label, likelihood %, evidence (blockquote), evidence against (for ruled-out stories this is the reason), and "What would confirm it: {would_confirm}" when present.
   - Timing line in the evidence block: "Answered in {time_spent_seconds} s", plus "Timer ran out" / "Said they ran out of time" badges when set.
   - Follow-up block if present: question + reply (or "Waiting for the student's reply").
+  - Riddle 3: show teacher-only rationale, predicted observations (clearly labelled as predictions, never evidence), and the actual reply or decline choice. Teacher override remains authoritative.
   - "Why this label?" collapsible: trace table (step, source, ok ✓/✗, latency ms, detail).
   - History list (older versions).
   - Override form: label select (all six), misconception select when label = misconception (options from `question.misconceptions`), note textarea → `api.overrideResponse` → re-render with returned detail.

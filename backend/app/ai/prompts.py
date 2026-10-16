@@ -8,7 +8,7 @@ import re
 from app.domain import HypothesisOut, QuestionSpec, StudentWork
 
 ANALYSIS_PROMPT_VERSION = "analysis-v2"
-FOLLOWUP_PROMPT_VERSION = "followup-v1"
+FOLLOWUP_PROMPT_VERSION = "followup-v2"
 
 _TAG = re.compile(r"</?\s*student_[a-z_]*\s*>", re.IGNORECASE)
 
@@ -91,6 +91,7 @@ def build_followup_prompt(question: QuestionSpec, work: StudentWork, hypotheses:
         f"- {h.kind}"
         + (f" (misconception id {h.misconception_id})" if h.misconception_id is not None else "")
         + f": evidence <student_quote>{_clean(h.evidence_for)}</student_quote>"
+        + f"; what would help: {h.would_confirm or 'not yet known'}"
         for h in hypotheses
     ) or "- (no clear explanation yet: ask them to show their thinking)"
     return f"""You help a teacher check WHY a student answered a question the way they did.
@@ -105,6 +106,16 @@ Key idea: {question.key_idea}
 Competing explanations:
 {options}
 
-Write ONE short, friendly question for the student (at most 30 words) whose answer would tell these explanations apart.
-Rules: do not reveal or hint at the correct answer; do not say whether the student was right; no judgemental words.
+Propose ONE short, friendly question (at most 30 words) and up to TWO alternatives.
+Only one will be shown. Prefer the least effort that could tell these explanations apart.
+For EACH candidate provide:
+- question: one small check, not the original question again or a request to repeat the explanation.
+- rationale: teacher-only explanation of why different replies could separate the stories.
+- expected_evidence: one entry per competing story, with its kind, misconception_id and a DISTINCT
+  observable reply that would support it. These are predictions, NOT evidence already observed.
+Rules: do not reveal or hint at the correct answer; do not say whether the student was right;
+no judgemental words, leading confirmation questions, or demands for a long explanation.
+Use a new small example, a neutral clarification, or a short check of their existing working.
+A reply alone cannot establish that time pressure caused an error: use recorded timing facts.
+The learner may decline or say they are not sure without penalty. The teacher decides what comes next.
 Return JSON only."""

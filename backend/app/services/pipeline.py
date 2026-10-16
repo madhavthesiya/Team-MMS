@@ -28,8 +28,9 @@ from app.ai.prompts import (
     build_followup_prompt,
 )
 from app.ai.schemas import AIAnalysis, AIFollowUp
-from app.domain import HypothesisOut, Label, QuestionSpec, RuleResult, Source, Status, StudentWork, TraceStep
-from app.services.guardrails import GuardedAnalysis, apply_guardrails, leaks_answer, looks_like_injection, quote_in
+from app.domain import ExpectedEvidence, FollowUpPlan, HypothesisOut, Label, QuestionSpec, RuleResult, Source, Status, StudentWork, TraceStep
+from app.services.followups import choose_follow_up
+from app.services.guardrails import GuardedAnalysis, apply_guardrails, looks_like_injection, quote_in
 from app.services.redact import redact_pii
 from app.services.rule_matcher import RULE_CERTAINTY, rule_diagnose, rule_would_confirm, timing_hypothesis
 
@@ -56,6 +57,8 @@ class DiagnosisOutcome:
     follow_up_discriminates: tuple[str, ...]
     ai_available: bool
     trace: tuple[TraceStep, ...]
+    follow_up_rationale: str = ""
+    follow_up_expected_evidence: tuple[ExpectedEvidence, ...] = ()
 
 
 class _Budget:
@@ -213,24 +216,26 @@ def _follow_up(
     ai: AIClient,
     trace: list[TraceStep],
     budget: _Budget,
-) -> str:
-    template = f"Walk me through, step by step, how you got {work.answer.strip()}."
+) -> FollowUpPlan | None:
     left = budget.left()
     if left < MIN_CALL_SECONDS:
-        trace.append(TraceStep("follow_up", "code", True, 0, detail="no time left for the AI; used the template"))
-        return template
+        trace.append(TraceStep("follow_up", "code", True, 0, detail="no time left for AI; targeted template or teacher review"))
+        return choose_follow_up(question, work, hypotheses)
     start = time.perf_counter()
     try:
         raw = ai.generate_json(build_followup_prompt(question, work, list(hypotheses)), AIFollowUp, timeout_seconds=left)
-        text = AIFollowUp.model_validate_json(raw).question.strip()
+        proposal = AIFollowUp.model_validate_json(raw)
     except (AIUnavailable, ValidationError):
-        trace.append(TraceStep("follow_up", "code", True, _ms(start), detail="AI could not write a question; used the template"))
-        return template
-    if not rule.is_correct and leaks_answer(text, question):
-        trace.append(TraceStep("follow_up", "code", True, _ms(start), detail="AI question revealed the answer; used the template"))
-        return template
-    trace.append(TraceStep("follow_up", "ai", True, _ms(start), ai.model, FOLLOWUP_PROMPT_VERSION, "targeted question written"))
-    return text
+        trace.append(TraceStep("follow_up", "code", True, _ms(start), detail="AI unavailable; targeted template or teacher review"))
+        return choose_follow_up(question, work, hypotheses)
+    plan = choose_follow_up(question, work, hypotheses, proposal)
+    generated = plan is not None and plan.question in [c.question.strip() for c in [proposal, *proposal.alternatives]]
+    trace.append(TraceStep(
+        "follow_up", "ai" if generated else "code", True, _ms(start), ai.model, FOLLOWUP_PROMPT_VERSION,
+        "brief safe candidate selected (word-count heuristic, not measured gain)" if generated
+        else "unsafe/repetitive candidates rejected; targeted template or teacher review",
+    ))
+    return plan
 
 
 def run_diagnosis(
@@ -323,8 +328,11 @@ def run_diagnosis(
         top_two = (ai_h, rule_h)
     else:
         top_two = hypotheses[:2]
-    question_text = _follow_up(question, work, rule, top_two, ai, trace, budget)
-    trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → asked one follow-up"))
-    return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "open", None,
-                            _reconcile((*hypotheses, *guarded.ruled_out)), question_text, tuple(h.kind for h in top_two),
-                            True, tuple(trace))
+    plan = _follow_up(question, work, rule, top_two, ai, trace, budget)
+    trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → " + (
+        "offered one optional follow-up" if plan else "no useful safe check; teacher review"
+    )))
+    return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "open" if plan else "not_sure", None,
+                            _reconcile((*hypotheses, *guarded.ruled_out)), plan.question if plan else None,
+                            tuple(h.kind for h in top_two) if plan else (), True, tuple(trace),
+                            plan.rationale if plan else "", plan.expected_evidence if plan else ())

@@ -1,10 +1,10 @@
 # Architecture
 
-This describes the backend as of 2026-10-17 (after Riddle 2). Intended behavior is in [api-contract.md](api-contract.md); verification and gaps are in [status.md](status.md).
+This describes the implementation as of 2026-10-17 (after Riddle 3). Intended behavior is in [api-contract.md](api-contract.md); verification and gaps are in [status.md](status.md).
 
 ## Runtime and module map
 
-The implemented service is synchronous FastAPI with SQLAlchemy and a Gemini client. It defaults to a repository-root SQLite database. A configured Postgres URL is rewritten to use the psycopg driver. FastAPI serves the built frontend bundle (`frontend/dist`) when present; `frontend/` currently holds the Vite scaffold.
+The implemented service is synchronous FastAPI with SQLAlchemy and a Gemini client. It defaults to a repository-root SQLite database. A configured Postgres URL is rewritten to use the psycopg driver. FastAPI serves the built React frontend (`frontend/dist`) when present; the frontend contains teacher setup/results/detail and student quiz/check flows.
 
 | Area | Files | Responsibility |
 | --- | --- | --- |
@@ -15,6 +15,7 @@ The implemented service is synchronous FastAPI with SQLAlchemy and a Gemini clie
 | Persistence | `backend/app/models.py` | Class, quiz, student, evidence, diagnosis, hypothesis, follow-up, AI trace |
 | Classroom services | `services/classrooms.py`, `students.py`, `sample.py`, `specs.py` | Quiz setup, safe student views, pending follow-ups, domain conversion |
 | Interpretation | `services/normalizer.py`, `rule_matcher.py`, `pipeline.py`, `guardrails.py` | Correctness, rules, AI orchestration, evidence checks, follow-up decisions |
+| Small diagnostic checks | `services/followups.py` | Short, safe candidate selection; hypothesis-specific fallbacks; predicted observations distinct from evidence |
 | Interpretation storage | `services/diagnosis_store.py`, `results.py` | Versioned diagnoses, teacher overrides, grouped teacher views |
 | Model boundary | `backend/app/ai/client.py`, `prompts.py`, `schemas.py` | Gemini transport, versioned prompts, structured output |
 | Access and abuse controls | `security.py`, `rate_limit.py`, `api/deps.py` | Token hashes, ownership, public/student rate limits |
@@ -32,6 +33,7 @@ flowchart TD
     F -->|Yes| G[Persist response and diagnosis version]
     F -->|Unclear, first pass| H[Ask one follow-up and persist pending state]
     H --> I[Student reply re-runs analysis within its own request budget]
+    H -->|Learner declines| J
     I --> E
     F -->|Still unclear after reply| J[Persist not_sure for teacher review]
     D -->|AI unavailable| K[Persist honest rule-only fallback]
@@ -47,6 +49,8 @@ The guardrail decision also tracks whether a follow-up is allowed, so the diagra
 - `Response` stores the original accepted answer, redacted explanation, confidence, and code-decided correctness. `(student_id, question_id)` is unique.
 - `Diagnosis` is an interpretation version for a response. Its hypotheses, follow-up, and AI trace belong to that version. The current view selects the highest version.
 - A student's follow-up reply is stored on the original `FollowUp` (claimed with a conditional UPDATE and committed before the model call); a reread creates a new diagnosis. An override also creates a new diagnosis with `source=teacher`.
+- A decline records `declined_reason` and its timestamp, with no synthetic reply or AI call. Claim and closure share a transaction under the response lock. If no newer version exists, a new `not_sure` reading preserves the hypotheses. It cannot replace a claimed reply or teacher decision; repeated choices are harmless.
+- Follow-up rationale and `expected_evidence` are teacher-only proposals about possible replies, never observed facts. Old follow-ups receive empty defaults during schema upgrade.
 - Teacher response details combine original student work, current diagnosis, older versions, the follow-up exchange, and trace steps. Student serialization excludes those teacher-only fields.
 - Versions are allocated as `MAX(version) + 1` under a row lock on the response (`SELECT … FOR UPDATE` on Postgres), with `UNIQUE(response_id, version)` as a backstop; writers retry on conflict.
 
@@ -58,10 +62,12 @@ The AI proposes a label and competing hypotheses. Guardrails verify allowed labe
 
 The pipeline shares a configured 30-second budget across model calls within each request and passes remaining time to the Gemini client; each call is also capped by the configured 20-second limit. Less than two seconds remaining skips the model call. The frontend plan uses 45 seconds. These settings express the intended latency budget; verify real elapsed behavior under deployment/network failures before treating it as a hard end-to-end deadline.
 
-Gemini errors, unusable structured output, and time exhaustion fall back to rules or a template follow-up. `AIRun` records metadata and parsed outcomes, rather than raw prompts. The health endpoint checks the DB and key presence; it does not call Gemini.
+The `followup-v2` prompt proposes a primary question and up to two alternatives in one model call, with a rationale and distinct predicted observations for the competing stories. Code rejects over-30-word, repeated, directly answer-revealing or judgemental candidates and incompatible story IDs. Among eligible candidates it prefers the shortest. Legacy question-only output uses code-owned confirmation hints. These checks and word counts are heuristics, not a semantic proof or measured information gain; usefulness needs real-model evaluation and teacher judgement.
+
+Gemini errors, unusable structured output, and time exhaustion fall back to rules or a hypothesis-specific template. If no useful safe template exists, preserve `not_sure` and defer to the teacher. `AIRun` records metadata and parsed outcomes, rather than raw prompts. The health endpoint checks the DB and key presence; it does not call Gemini.
 
 ## Persistence and deployment boundaries
 
 Startup runs `Base.metadata.create_all` for new tables, then `migrations.upgrade_schema` for additive column/index upgrades on existing databases (no data is dropped). The module-level engine/session factory assumes a single configured database per running service. Rate-limit state is held in process memory.
 
-The intended deployment serves React and `/api` from one origin. A Dockerfile, `render.yaml` and smoke scripts exist; the React app is still the scaffold. Do not infer deployment readiness from the existing SPA-serving tests or from the hosting instructions alone.
+The default deployment serves React and `/api` from one origin; the pulled frontend also supports `VITE_API_URL` for separate hosting. A Dockerfile, `render.yaml`, Vercel config and smoke scripts exist. Do not infer deployment readiness from a production build or local tests alone.

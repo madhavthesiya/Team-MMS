@@ -73,3 +73,19 @@ class TraceStep:
     model: str | None = None
     prompt_version: str | None = None
     detail: str | None = None
+
+
+@dataclass(frozen=True)
+class ExpectedEvidence:
+    """A predicted observation, never evidence that the learner actually supplied."""
+
+    kind: HypothesisKind
+    misconception_id: int | None
+    observation: str
+
+
+@dataclass(frozen=True)
+class FollowUpPlan:
+    question: str
+    rationale: str
+    expected_evidence: tuple[ExpectedEvidence, ...]

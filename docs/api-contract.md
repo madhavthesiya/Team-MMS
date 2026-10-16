@@ -1,4 +1,6 @@
-# BehindTheMark — API Contract (v1.3)
+# BehindTheMark — API Contract (v1.4)
+
+> v1.4 (Riddle 3 — The Question That Separates): optional follow-ups; new student `POST /api/follow-ups/{id}/decline`; teacher-only follow-up `rationale`, `expected_evidence`, `declined_reason`. Existing reply/submit shapes are unchanged. Old stored follow-ups have empty metadata after an additive upgrade.
 
 > v1.3: `pending_follow_ups[].reply_saved`; new `POST /api/follow-ups/{id}/resume` to finish a saved reply whose processing didn't complete.
 >
@@ -10,7 +12,7 @@ Shared contract between backend (Track A) and frontend (Track B). Change it only
 
 - Base path: `/api`. JSON in, JSON out. Times are ISO 8601 UTC.
 - Errors: `{"detail": "human readable message"}`. Validation errors are `422` with FastAPI's `{"detail": [{"loc": [...], "msg": "..."}]}`.
-- `429` → `{"detail": "Too many requests — wait a minute and try again."}`. Limits: create-class/sample/join 120/min per IP; submit/reply 20/min per student token.
+- `429` → `{"detail": "Too many requests — wait a minute and try again."}`. Limits: create-class/sample/join 120/min per IP; submit/reply/resume/decline 20/min per student token.
 - Teacher auth: header `X-Teacher-Token: <teacher_token>` (returned once, at class creation).
 - Student auth: header `X-Student-Token: <student_token>` (returned once, at join).
 
@@ -143,11 +145,21 @@ or, when the system wants to check its reading:
 Usually 2–10 s, never more than ~30 s (server-side AI budget; after that it answers with rules / a template question) — show a loading state and use a 45 s client timeout. `409` already answered (call `me` to recover any pending follow-up); `404` question not in your class.
 Student never receives correctness or labels.
 
+Follow-ups are optional, untimed and at most 30 words. Code filters repeated original questions, generic repeat-explanation requests, judgemental wording, and direct answer leaks. The shortest eligible candidate is preferred (a word-count burden heuristic, not measured information gain). When no useful safe check is available, the response stays `not_sure` for teacher review instead of asking again. Student responses never include the teacher-only rationale or expected observations.
+
 ### `POST /api/follow-ups/{follow_up_id}/reply` · student
 Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` already replied. `404` not yours. Same ≤30 s budget as submit. If the teacher already reviewed the answer, the reply is still saved (teacher sees it) and the teacher's reading stays. A `409` whose message says the answer is saved means processing failed after saving: the follow-up shows up in `me` with `reply_saved: true`; call resume.
 
 ### `POST /api/follow-ups/{follow_up_id}/resume` · student
 No body. Finishes processing a saved reply → `200 {"status": "done"}`. Safe to repeat: if it was already processed or the teacher has decided, it does nothing and still returns `200`. `409` if no reply has been saved yet; `404` not yours. Same ≤30 s budget as submit.
+
+### `POST /api/follow-ups/{follow_up_id}/decline` · student
+Body `{"reason": "skip"}` where reason is `"skip" | "not_sure" | "teacher"`.
+`200 {"status": "done"}`. Records the learner's choice and completion time, without a fabricated reply or a model call. If the initial diagnosis is still current, creates a new `not_sure` version preserving all hypotheses/evidence. A teacher's newer decision remains authoritative.
+
+The check stops appearing in `pending_follow_ups`; refresh/retry is safe. Repeated declines leave the first choice unchanged. `409` if a reply was already saved (it cannot be replaced); `404` not yours; `422` invalid reason. Reply after decline returns `409`; resume after decline is a harmless `200`. Declining is never evidence of guessing, misunderstanding, or dishonesty.
+
+**Frontend:** show “I’m not sure”, “Skip this check”, and “Discuss with my teacher” beside the reply action. Recover uncertain network outcomes through `me`. When `reply_saved` is true, show a retry-processing action, not another reply box or decline buttons. No timer runs on the follow-up.
 
 ## Results (teacher)
 
@@ -206,11 +218,20 @@ Groups: correct first, then incorrect; empty groups omitted.
     ]
   },
   "history": [{"version": 1, "label": "not_sure", "source": "both", "certainty": 0.55, "status": "open", "created_at": "..."}],
-  "follow_up": {"question_text": "...", "student_reply": "...", "answered_at": "..."},
+  "follow_up": {
+    "question_text": "...", "student_reply": "...", "answered_at": "...",
+    "rationale": "Why this small check might separate the competing stories.",
+    "expected_evidence": [
+      {"kind": "understood", "misconception_id": null, "observation": "Explains why the method works."},
+      {"kind": "guessed", "misconception_id": null, "observation": "Says they chose without a method."}
+    ],
+    "declined_reason": ""
+  },
   "trace": [{"step": "rule_match", "source": "rule", "model": null, "prompt_version": null, "latency_ms": 1, "ok": true, "detail": "Correct answer"}]
 }
 ```
 `follow_up` may be `null`. `history` lists older versions (newest first), excluding the current one.
+`declined_reason` is empty or `skip | not_sure | teacher`; when set, `student_reply` remains null. `expected_evidence` is a proposed interpretation of possible future replies, **not observed student evidence**. Never merge it into `evidence_for`. The teacher view shows “Why this check?”, the proposed signals, the actual reply/choice, and existing teacher override controls. Model likelihoods and this selection heuristic are not calibrated probabilities or proof of diagnostic usefulness.
 Hypotheses = every story weighed: `supported` (chosen), `open` (still possible — show its `would_confirm`), `ruled_out` (rejected — show `evidence_against` as the reason). Show all of them, not just the label: "Stories considered".
 
 ### `POST /api/responses/{response_id}/override` · teacher

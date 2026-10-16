@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useTeacherToken } from "../../lib/useTeacherToken";
 import { api } from "../../api/client";
 import type { Label, OverrideIn, ResponseDetail as ResponseDetailType } from "../../api/types";
-import { sourceText, confidenceText } from "../../lib/labels";
+import { sourceText, confidenceText, labelText } from "../../lib/labels";
 import { Spinner } from "../../components/Spinner";
 import { ErrorBox } from "../../components/ErrorBox";
 import { Banner } from "../../components/Banner";
@@ -162,9 +162,9 @@ export default function ResponseDetail() {
       </div>
 
       {/* Main Studio Split Layout */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Left Pane: Student Evidence, AI Diagnosis & Trace */}
-        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="shrink-0 lg:flex-1 lg:min-h-0 min-w-0 lg:overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
           {/* Student Reasoning & Explanation Card */}
           <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-white/10 pb-4">
@@ -392,6 +392,31 @@ export default function ResponseDetail() {
               </div>
 
               <div className="space-y-3">
+                <p className="text-xs text-zinc-400">
+                  One optional check to understand, not to score. You decide what comes next.
+                </p>
+                {follow_up.rationale && (
+                  <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-white/15 text-xs text-zinc-200">
+                    <span className="font-semibold text-white block mb-1">Why this check?</span>
+                    {follow_up.rationale}
+                  </div>
+                )}
+                {follow_up.expected_evidence?.length > 0 && (
+                  <div className="space-y-2 text-xs">
+                    <p className="font-semibold text-white">What different replies might suggest</p>
+                    <p className="text-zinc-400">Predictions only — not observed evidence or proof of a story.</p>
+                    {follow_up.expected_evidence.map((expected) => (
+                      <div key={`${expected.kind}-${expected.misconception_id}`} className="rounded-xl border border-white/10 p-3">
+                        <span className="font-semibold text-zinc-100 block mb-1">
+                          {labelText(expected.kind, question.misconceptions.find(
+                            (m) => m.misconception_id === expected.misconception_id
+                          )?.label)}
+                        </span>
+                        <p className="text-zinc-300">{expected.observation}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-white/15 text-xs text-zinc-200">
                   <span className="font-semibold text-white block mb-1">Question asked to student:</span>
                   "{follow_up.question_text}"
@@ -399,7 +424,14 @@ export default function ResponseDetail() {
 
                 <div className="p-3.5 rounded-xl bg-black/50 border border-white/5 text-xs">
                   <span className="font-semibold text-zinc-400 block mb-1">Student's reply:</span>
-                  {follow_up.student_reply ? (
+                  {follow_up.declined_reason ? (
+                    <p className="text-zinc-300">
+                      {follow_up.declined_reason === "teacher" ? "Learner asked to discuss this with you."
+                        : follow_up.declined_reason === "not_sure" ? "Learner chose ‘I’m not sure’."
+                        : "Learner skipped this check."}
+                      {" "}This is not evidence of guessing or misunderstanding; no AI inference was made.
+                    </p>
+                  ) : follow_up.student_reply ? (
                     <p className="text-zinc-100 italic">"{follow_up.student_reply}"</p>
                   ) : (
                     <p className="text-zinc-500 italic">Waiting for student's reply…</p>
@@ -477,7 +509,7 @@ export default function ResponseDetail() {
         </div>
 
         {/* Right Pane: Teacher Override Cockpit & History */}
-        <div className="w-full lg:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/10 bg-zinc-950/70 p-4 sm:p-6 flex flex-col min-h-0 overflow-y-auto space-y-6">
+        <div className="w-full lg:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/10 bg-zinc-950/70 p-4 sm:p-6 flex flex-col lg:min-h-0 lg:overflow-y-auto space-y-6">
           {/* Teacher Intervention Header */}
           <div className="space-y-1 pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">

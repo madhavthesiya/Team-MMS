@@ -6,13 +6,15 @@ Concurrency rules (teacher overrides vs AI re-reads):
   next version from the database, and relies on UNIQUE(response_id, version) as a backstop.
 - The AI never writes on top of a teacher's reading: it re-checks at save time, after the call.
 """
+from dataclasses import asdict
+
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ai.client import AIClient
 from app.config import Settings
-from app.domain import StudentWork
+from app.domain import HypothesisOut, StudentWork, TraceStep
 from app.models import AIRun, Diagnosis, FollowUp, Hypothesis, Question, Response, Student, utcnow
 from app.schemas import OverrideIn, ResponseIn
 from app.services.errors import ConflictError, InvalidInputError, NotFoundError
@@ -73,7 +75,11 @@ def store_outcome(db: Session, response: Response, outcome: DiagnosisOutcome) ->
         for s in outcome.trace
     ]
     follow_up = (
-        FollowUp(question_text=outcome.follow_up_question, discriminates=list(outcome.follow_up_discriminates))
+        FollowUp(
+            question_text=outcome.follow_up_question, discriminates=list(outcome.follow_up_discriminates),
+            rationale=outcome.follow_up_rationale,
+            expected_evidence=[asdict(e) for e in outcome.follow_up_expected_evidence],
+        )
         if outcome.follow_up_question
         else None
     )
@@ -149,7 +155,8 @@ def _own_follow_up(db: Session, student: Student, follow_up_id: int) -> FollowUp
 def awaiting_processing(db: Session, follow_up: FollowUp) -> bool:
     """Reply saved, but no newer reading exists yet (still running, or the save failed): resumable."""
     latest = _latest(db, follow_up.diagnosis.response_id)
-    return follow_up.student_reply is not None and latest is not None and latest.id == follow_up.diagnosis_id
+    return (follow_up.student_reply is not None and not follow_up.declined_reason
+            and latest is not None and latest.id == follow_up.diagnosis_id)
 
 
 def _process_reply(db: Session, follow_up: FollowUp, ai: AIClient, settings: Settings) -> Diagnosis | None:
@@ -196,7 +203,7 @@ def reply_to_follow_up(
     # Claim the follow-up atomically, so two simultaneous replies can't both be accepted.
     claimed = db.execute(
         update(FollowUp)
-        .where(FollowUp.id == follow_up_id, FollowUp.student_reply.is_(None))
+        .where(FollowUp.id == follow_up_id, FollowUp.student_reply.is_(None), FollowUp.declined_reason == "")
         .values(student_reply=redact_pii(reply), answered_at=utcnow())
     ).rowcount
     if not claimed:
@@ -213,9 +220,57 @@ def resume_follow_up(
     """Finish a reply whose processing never completed (timeout, crash, failed save). Idempotent:
     if it was already processed or a teacher decided, there is nothing to do."""
     follow_up = _own_follow_up(db, student, follow_up_id)
+    if follow_up.declined_reason:
+        return None
     if follow_up.student_reply is None:
         raise ConflictError("Answer the follow-up question first.")
     return _process_reply(db, follow_up, ai, settings)
+
+
+def decline_follow_up(db: Session, student: Student, follow_up_id: int, reason: str) -> None:
+    """A learner may stop. This records a choice, NOT evidence of guessing or a misconception.
+
+    Claim and close in one transaction. A teacher version always wins; a reply already claimed
+    cannot be replaced. Repeating the same choice after a lost response is harmless.
+    """
+    follow_up = _own_follow_up(db, student, follow_up_id)
+    response_id = follow_up.diagnosis.response_id
+    for _ in range(_WRITE_ATTEMPTS):
+        _lock_response(db, response_id)
+        db.refresh(follow_up)
+        if follow_up.declined_reason:
+            db.commit()
+            return
+        claimed = db.execute(
+            update(FollowUp)
+            .where(FollowUp.id == follow_up_id, FollowUp.student_reply.is_(None), FollowUp.declined_reason == "")
+            .values(declined_reason=reason, answered_at=utcnow())
+        ).rowcount
+        if not claimed:
+            db.rollback()
+            raise ConflictError("Your reply is already saved. It will not be replaced.")
+        latest = _latest(db, response_id)
+        if latest is not None and latest.id == follow_up.diagnosis_id:
+            hypotheses = tuple(
+                HypothesisOut(
+                    h.kind, h.misconception_id, h.evidence_for, h.evidence_against, h.likelihood,
+                    "ruled_out" if h.status == "ruled_out" else "open", h.would_confirm,
+                ) for h in latest.hypotheses
+            )
+            outcome = DiagnosisOutcome(
+                follow_up.diagnosis.response.is_correct, "not_sure", 0.0, latest.source, "not_sure", None,
+                hypotheses, None, (), True,
+                (TraceStep("learner_choice", "code", True, 0,
+                           detail=f"Learner chose '{reason}'; no inference made. Teacher decides next steps."),),
+            )
+            try:
+                store_outcome(db, follow_up.diagnosis.response, outcome)
+            except IntegrityError:
+                db.rollback()
+                continue
+        db.commit()
+        return
+    raise ConflictError("This answer is being updated — please try again.")
 
 
 def override_diagnosis(db: Session, response: Response, body: OverrideIn) -> Diagnosis:
