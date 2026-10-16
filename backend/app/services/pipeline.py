@@ -75,6 +75,25 @@ def _key(h: HypothesisOut) -> tuple[str, int | None]:
     return h.kind, h.misconception_id
 
 
+_STATUS_RANK = {"supported": 0, "open": 1, "ruled_out": 2}
+
+
+def _reconcile(hypotheses: tuple[HypothesisOut, ...]) -> tuple[HypothesisOut, ...]:
+    """One entry per story (kind + misconception). If a story has evidence and was also ruled out,
+    keep the evidence-backed entry and carry the rejection reason into its evidence_against."""
+    merged: dict[tuple[str, int | None], HypothesisOut] = {}
+    for h in hypotheses:
+        k = _key(h)
+        if k not in merged:
+            merged[k] = h
+            continue
+        keep, other = sorted((merged[k], h), key=lambda x: _STATUS_RANK[x.status])
+        if other.status == "ruled_out" and other.evidence_against and not keep.evidence_against:
+            keep = replace(keep, evidence_against=other.evidence_against)
+        merged[k] = keep
+    return tuple(merged.values())
+
+
 def _rule_hypothesis(question: QuestionSpec, rule: RuleResult, status: str = "open") -> HypothesisOut:
     return HypothesisOut(
         kind=rule.label,
@@ -251,9 +270,14 @@ def run_diagnosis(
 
     # Every story with evidence: the AI's, plus the timing story the code owns.
     stories = guarded.hypotheses
+    ruled_out = guarded.ruled_out
     timing = timing_hypothesis(question, work, rule.is_correct)
-    if timing is not None and all(_key(h) != _key(timing) for h in stories):
-        stories = tuple(sorted((*stories, timing), key=lambda h: h.likelihood, reverse=True))
+    if timing is not None:
+        if all(_key(h) != _key(timing) for h in stories):
+            stories = tuple(sorted((*stories, timing), key=lambda h: h.likelihood, reverse=True))
+        # Recorded timing is a fact; the model can't rule the timing story out.
+        ruled_out = tuple(h for h in ruled_out if h.kind != "out_of_time")
+        guarded = replace(guarded, ruled_out=ruled_out)
 
     confident = guarded.label != "not_sure" and guarded.certainty >= threshold
     agrees = _agrees(rule, guarded)
@@ -273,7 +297,7 @@ def run_diagnosis(
             detail = f"settled as '{guarded.label}' ({source})"
         trace.append(TraceStep("decision", "code", True, 0, detail=detail))
         return DiagnosisOutcome(rule.is_correct, guarded.label, guarded.certainty, source, "settled",
-                                guarded.misconception_id, (*settled, *guarded.ruled_out), None, (), True, tuple(trace))
+                                guarded.misconception_id, _reconcile((*settled, *guarded.ruled_out)), None, (), True, tuple(trace))
 
     if gate is not None:
         reason = gate
@@ -292,7 +316,7 @@ def run_diagnosis(
     if not allow_follow_up:
         trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → not sure, sent to the teacher"))
         return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "not_sure",
-                                None, (*hypotheses, *guarded.ruled_out), None, (), True, tuple(trace))
+                                None, _reconcile((*hypotheses, *guarded.ruled_out)), None, (), True, tuple(trace))
 
     if confident and not agrees and rule_h is not None:  # rule vs AI: ask what separates the two views
         ai_h = next(h for h in hypotheses if _backs_label(h, guarded) and h is not rule_h)
@@ -302,5 +326,5 @@ def run_diagnosis(
     question_text = _follow_up(question, work, rule, top_two, ai, trace, budget)
     trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → asked one follow-up"))
     return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "open", None,
-                            (*hypotheses, *guarded.ruled_out), question_text, tuple(h.kind for h in top_two),
+                            _reconcile((*hypotheses, *guarded.ruled_out)), question_text, tuple(h.kind for h in top_two),
                             True, tuple(trace))

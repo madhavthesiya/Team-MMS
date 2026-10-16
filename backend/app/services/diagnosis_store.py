@@ -139,30 +139,26 @@ def submit_response(
     return response, diagnosis.follow_up
 
 
-def reply_to_follow_up(
-    db: Session, student: Student, follow_up_id: int, reply: str, ai: AIClient, settings: Settings
-) -> Diagnosis | None:
-    """Save the reply, re-read the answer with it, and store the new reading — unless a teacher
-    has decided in the meantime. Returns the new diagnosis, or None if the teacher's stands."""
+def _own_follow_up(db: Session, student: Student, follow_up_id: int) -> FollowUp:
     follow_up = db.get(FollowUp, follow_up_id)
     if follow_up is None or follow_up.diagnosis.response.student_id != student.id:
         raise NotFoundError("Follow-up not found.")
+    return follow_up
+
+
+def awaiting_processing(db: Session, follow_up: FollowUp) -> bool:
+    """Reply saved, but no newer reading exists yet (still running, or the save failed): resumable."""
+    latest = _latest(db, follow_up.diagnosis.response_id)
+    return follow_up.student_reply is not None and latest is not None and latest.id == follow_up.diagnosis_id
+
+
+def _process_reply(db: Session, follow_up: FollowUp, ai: AIClient, settings: Settings) -> Diagnosis | None:
+    """Re-read the answer with the saved reply and store the result as the next version — but only
+    if nothing newer has appeared since the follow-up was asked (a teacher override, or another
+    request that already finished this). Returns the new diagnosis, or None if superseded."""
     response_id = follow_up.diagnosis.response_id
-
-    # Claim the follow-up atomically, so two simultaneous replies can't both be accepted.
-    claimed = db.execute(
-        update(FollowUp)
-        .where(FollowUp.id == follow_up_id, FollowUp.student_reply.is_(None))
-        .values(student_reply=redact_pii(reply), answered_at=utcnow())
-    ).rowcount
-    if not claimed:
-        db.rollback()
-        raise ConflictError("You already answered this follow-up.")
-    db.commit()  # the reply is evidence: keep it whatever happens next
-    db.refresh(follow_up)
-
-    latest = _latest(db, response_id)
-    if latest is not None and latest.source == "teacher":
+    asked_in = follow_up.diagnosis_id
+    if not awaiting_processing(db, follow_up):
         db.commit()
         return None  # teacher readings are final; the reply stays visible to the teacher
     response = db.get(Response, response_id)
@@ -179,16 +175,47 @@ def reply_to_follow_up(
     for _ in range(_WRITE_ATTEMPTS):
         _lock_response(db, response_id)
         latest = _latest(db, response_id)
-        if latest is not None and latest.source == "teacher":
+        if latest is None or latest.id != asked_in:
             db.commit()
-            return None  # the teacher decided while the AI was thinking
+            return None  # a teacher decided, or another request finished first, while the AI was thinking
         try:
             diagnosis = store_outcome(db, db.get(Response, response_id), outcome)
             db.commit()
             return diagnosis
         except IntegrityError:
             db.rollback()  # another writer took this version number; look again
-    raise ConflictError("This answer is being updated right now — please try again.")
+    # The reply is saved and the follow-up stays resumable (see pending_follow_ups / resume).
+    raise ConflictError("Your answer is saved but still being processed — please try again in a moment.")
+
+
+def reply_to_follow_up(
+    db: Session, student: Student, follow_up_id: int, reply: str, ai: AIClient, settings: Settings
+) -> Diagnosis | None:
+    """Save the reply (once), then process it. Returns the new diagnosis, or None if a teacher's stands."""
+    follow_up = _own_follow_up(db, student, follow_up_id)
+    # Claim the follow-up atomically, so two simultaneous replies can't both be accepted.
+    claimed = db.execute(
+        update(FollowUp)
+        .where(FollowUp.id == follow_up_id, FollowUp.student_reply.is_(None))
+        .values(student_reply=redact_pii(reply), answered_at=utcnow())
+    ).rowcount
+    if not claimed:
+        db.rollback()
+        raise ConflictError("You already answered this follow-up.")
+    db.commit()  # the reply is evidence: keep it whatever happens next
+    db.refresh(follow_up)
+    return _process_reply(db, follow_up, ai, settings)
+
+
+def resume_follow_up(
+    db: Session, student: Student, follow_up_id: int, ai: AIClient, settings: Settings
+) -> Diagnosis | None:
+    """Finish a reply whose processing never completed (timeout, crash, failed save). Idempotent:
+    if it was already processed or a teacher decided, there is nothing to do."""
+    follow_up = _own_follow_up(db, student, follow_up_id)
+    if follow_up.student_reply is None:
+        raise ConflictError("Answer the follow-up question first.")
+    return _process_reply(db, follow_up, ai, settings)
 
 
 def override_diagnosis(db: Session, response: Response, body: OverrideIn) -> Diagnosis:

@@ -49,15 +49,19 @@ def student_out(student: Student) -> StudentOut:
 
 
 def pending_follow_ups(student: Student) -> list[PendingFollowUpOut]:
-    """Follow-ups still waiting for this student, so a refresh or lost response doesn't strand them.
-    Only the current reading counts: once a teacher has reviewed an answer, its follow-up is closed."""
+    """Follow-ups still waiting on this student — unanswered, or answered but never processed —
+    so a refresh, timeout or failed save doesn't strand them. Only the current reading counts:
+    once a teacher has reviewed an answer (a newer version exists), its follow-up is closed."""
     pending = []
     for r in sorted(student.responses, key=lambda r: r.question.position):
         current = r.current_diagnosis
-        if current and current.status == "open" and current.follow_up and current.follow_up.student_reply is None:
+        if current and current.status == "open" and current.follow_up:
             pending.append(
                 PendingFollowUpOut(
-                    follow_up_id=current.follow_up.id, question_id=r.question_id, question_text=current.follow_up.question_text
+                    follow_up_id=current.follow_up.id,
+                    question_id=r.question_id,
+                    question_text=current.follow_up.question_text,
+                    reply_saved=current.follow_up.student_reply is not None,
                 )
             )
     return pending

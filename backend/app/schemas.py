@@ -8,17 +8,13 @@ from app.domain import AnswerType, Confidence, HypothesisKind, HypStatus, Label,
 from app.services.normalizer import answers_match
 
 
-def _text(min_length: int, max_length: int):
-    return Annotated[str, StringConstraints(strip_whitespace=True, min_length=min_length, max_length=max_length)]
-
-
-Str30 = _text(1, 30)
-Str80 = _text(1, 80)
-Str100 = _text(1, 100)
-Str120 = _text(1, 120)
-Str1000 = _text(1, 1000)
-OptStr500 = _text(0, 500)
-OptStr2000 = _text(0, 2000)
+Str30 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
+Str80 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+Str100 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+Str120 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+Str1000 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+OptStr500 = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+OptStr2000 = Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)]
 JoinCode = Annotated[str, StringConstraints(strip_whitespace=True, to_upper=True, min_length=6, max_length=6)]
 
 
@@ -133,6 +129,7 @@ class PendingFollowUpOut(BaseModel):
     follow_up_id: int
     question_id: int
     question_text: str
+    reply_saved: bool  # True: the reply is in, processing didn't finish → call .../resume
 
 
 class StudentOut(BaseModel):

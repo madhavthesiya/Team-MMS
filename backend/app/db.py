@@ -42,9 +42,11 @@ def configure_db(url: str) -> Engine:
 
 def init_db() -> None:
     from app import models  # noqa: F401  (registers tables on Base.metadata)
+    from app.migrations import upgrade_schema
 
     assert _engine is not None, "configure_db() must run first"
-    Base.metadata.create_all(_engine)
+    Base.metadata.create_all(_engine)  # new tables only
+    upgrade_schema(_engine)  # new columns/indexes on tables that already existed
 
 
 def get_db() -> Iterator[Session]:

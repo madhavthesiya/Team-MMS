@@ -218,6 +218,7 @@ def test_pending_follow_up_survives_a_refresh(client, fake_ai):
         "follow_up_id": r.json()["follow_up"]["follow_up_id"],
         "question_id": s["quiz"]["questions"][0]["question_id"],
         "question_text": "How would you add 1/3 and 1/6?",
+        "reply_saved": False,
     }]
     fake_ai.push(analysis("understood", 0.9, hyp("understood", "2/6", 0.9)))
     client.post(f"/api/follow-ups/{me['pending_follow_ups'][0]['follow_up_id']}/reply",

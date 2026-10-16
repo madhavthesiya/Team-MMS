@@ -143,7 +143,7 @@ Re-deploy is automatic on every push to `main`. After each deploy, run Task C5's
 
 **Files:** Create `eval/cases.jsonl`
 
-Each line: `{"id", "question", "answer", "explanation", "self_confidence", "expected", "why"}`. `question` is the 1-based index into the sample quiz (`backend/app/sample/fractions_quiz.json`). `expected` is one of `understood | misread | misconception | guessed | slip | not_sure`. `why` is one line justifying the label (for the README and the debate). Optional timing fields (Riddle 2): `timed_out` (bool; only meaningful on questions with a timer — Q2 and Q9 in the sample have one), `ran_out_of_time` (bool), `time_spent_seconds` (int). Optional `follow_up_reply`: if the first pass asks a follow-up, the runner replies with this text and scores the second pass — this tests that a follow-up can resolve a rule/AI disagreement. Without it, an unresolved first pass scores as `not_sure`.
+Each line: `{"id", "question", "answer", "explanation", "self_confidence", "expected", "why"}`. `question` is the 1-based index into the sample quiz (`backend/app/sample/fractions_quiz.json`). `expected` is one of `understood | misread | misconception | guessed | slip | out_of_time | not_sure`. `why` is one line justifying the label (for the README and the debate). Optional timing fields (Riddle 2): `timed_out` (bool; only meaningful on questions with a timer — Q2 and Q9 in the sample have one), `ran_out_of_time` (bool), `time_spent_seconds` (int). Optional `follow_up_reply`: if the first pass asks a follow-up, the runner replies with this text and scores the second pass — this tests that a follow-up can resolve a rule/AI disagreement. Without it, an unresolved first pass scores as `not_sure`.
 
 Sample quiz questions, for reference:
 1. 1/2 + 1/4 (= 3/4) · 2. bigger of 1/3, 1/5 (= 1/3) · 3. 3/4 of 20 (= 15) · 4. 0.6 as simplest fraction (= 3/5) · 5. 2/3 × 3/4 (= 1/2) · 6. pizza 8 slices, 3 eaten, fraction left (= 5/8) · 7. 1/2 ÷ 1/4 (= 2) · 8. Is 2/4 = 1/2? (Yes) · 9. order 1/2, 2/5, 3/4 (= 2/5, 1/2, 3/4) · 10. 5/6 − 1/3 (= 1/2)
@@ -203,7 +203,7 @@ from app.services.pipeline import run_diagnosis  # noqa: E402
 from app.services.sample import load_sample_quiz  # noqa: E402
 from app.services.specs import spec_from_input  # noqa: E402
 
-LABELS = ["understood", "misread", "misconception", "guessed", "slip", "not_sure"]
+LABELS = ["understood", "misread", "misconception", "guessed", "slip", "out_of_time", "not_sure"]
 
 
 def build_specs():

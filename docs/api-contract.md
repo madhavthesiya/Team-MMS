@@ -1,5 +1,7 @@
-# BehindTheMark — API Contract (v1.2)
+# BehindTheMark — API Contract (v1.3)
 
+> v1.3: `pending_follow_ups[].reply_saved`; new `POST /api/follow-ups/{id}/resume` to finish a saved reply whose processing didn't complete.
+>
 > v1.2 (Riddle 2 — One Error, Several Stories): new label `out_of_time`; optional per-question `time_limit_seconds`; submit takes `time_spent_seconds`, `timed_out`, `ran_out_of_time`; hypotheses carry `would_confirm` and rejected stories (`status: ruled_out`); results add `wrong_answers` (same wrong answer → its different stories); UI copy for `misread` is now "Missed a condition in the question".
 >
 > v1.1: `pending_follow_ups` on join/me; submit budget is ≤30 s; rate limits split (public per IP, student per token).
@@ -117,7 +119,8 @@ Student quiz never includes correct answers, key ideas or misconceptions. `quiz`
 `200` → same shape as join, without `student_token`.
 
 `pending_follow_ups` lists follow-up questions still waiting for a reply, e.g.
-`[{"follow_up_id": 4, "question_id": 1, "question_text": "Can you show how you'd add 1/3 + 1/6 the same way?"}]`.
+`[{"follow_up_id": 4, "question_id": 1, "question_text": "Can you show how you'd add 1/3 + 1/6 the same way?", "reply_saved": false}]`.
+`reply_saved: true` means the reply was saved but processing didn't finish (timeout, crash, failed save): call `POST /api/follow-ups/{id}/resume` instead of asking again.
 **Frontend rule:** on load (and after any submit `409` or network error), call `me` and show pending follow-ups *before* the next unanswered question. A follow-up disappears from this list once answered, or once the teacher has reviewed that answer.
 
 ## Responses (student)
@@ -141,7 +144,10 @@ Usually 2–10 s, never more than ~30 s (server-side AI budget; after that it an
 Student never receives correctness or labels.
 
 ### `POST /api/follow-ups/{follow_up_id}/reply` · student
-Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` already replied. `404` not yours. Same ≤30 s budget as submit. If the teacher already reviewed the answer, the reply is still saved (teacher sees it) and the teacher's reading stays.
+Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` already replied. `404` not yours. Same ≤30 s budget as submit. If the teacher already reviewed the answer, the reply is still saved (teacher sees it) and the teacher's reading stays. A `409` whose message says the answer is saved means processing failed after saving: the follow-up shows up in `me` with `reply_saved: true`; call resume.
+
+### `POST /api/follow-ups/{follow_up_id}/resume` · student
+No body. Finishes processing a saved reply → `200 {"status": "done"}`. Safe to repeat: if it was already processed or the teacher has decided, it does nothing and still returns `200`. `409` if no reply has been saved yet; `404` not yours. Same ≤30 s budget as submit.
 
 ## Results (teacher)
 

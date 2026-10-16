@@ -141,7 +141,7 @@ export interface StudentQuestion {
   time_limit_seconds: number | null;
 }
 export interface StudentQuiz { topic: string; title: string; questions: StudentQuestion[] }
-export interface PendingFollowUp { follow_up_id: number; question_id: number; question_text: string }
+export interface PendingFollowUp { follow_up_id: number; question_id: number; question_text: string; reply_saved: boolean }
 export interface StudentInfo {
   student_id: number; nickname: string; class_name: string; quiz: StudentQuiz | null;
   answered_question_ids: number[]; pending_follow_ups: PendingFollowUp[];
@@ -261,6 +261,8 @@ export const api = {
   submit: (token: string, body: ResponseIn) => request<SubmitResult>("POST", "/responses", body, { student: token }, 45000),
   reply: (token: string, followUpId: number, reply: string) =>
     request<{ status: "done" }>("POST", `/follow-ups/${followUpId}/reply`, { reply }, { student: token }, 45000),
+  resume: (token: string, followUpId: number) =>
+    request<{ status: "done" }>("POST", `/follow-ups/${followUpId}/resume`, undefined, { student: token }, 45000),
 };
 ```
 
@@ -518,7 +520,7 @@ Accept: can create a 3-question quiz on a phone without horizontal scroll. Commi
   - Inputs: answer (number/text → text input; choice → radio buttons), explanation textarea ("How did you get this? Explain in your own words."), confidence segmented control (Sure / Not sure / I guessed → `sure|unsure|guessed`), and a tick box "I ran out of time" (`ran_out_of_time`). Submit disabled until answer + confidence set.
   - Timing (Riddle 2): start a clock when the question appears; send `time_spent_seconds` (whole seconds) on submit. If the question has `time_limit_seconds`, show a visible countdown; at zero, auto-submit whatever is typed with `timed_out: true` (blank answer → send "-" to meet the 1-char minimum; confidence defaults to `unsure`). Never auto-submit on questions without a timer.
   - Submit → Spinner "Reading your reasoning…" (can take up to 10 s) → if `follow_up` → show it as "One quick question" with a reply textarea → `api.reply` → next question; else next question.
-  - **Pending follow-ups first:** on load, if `pending_follow_ups` is non-empty, show the first one ("One quick question about Q{n}") with a reply box before any new question. A refresh mid-follow-up must land back on it.
+  - **Pending follow-ups first:** on load, if `pending_follow_ups` is non-empty, handle the first one before any new question. `reply_saved: false` → show it ("One quick question about Q{n}") with a reply box. `reply_saved: true` → show "Finishing up…" and call `api.resume`, then re-fetch `me`. A refresh mid-follow-up must land back on it.
   - 409 on submit or a network error/timeout after submitting → re-fetch `api.me` and continue from its state (it may now have a pending follow-up). Network error before the request reached the server → ErrorBox with retry keeping the typed text.
   - Submit/reply can take up to ~30 s server-side; client timeout is 45 s.
   - Done screen: "All done — thanks, {nickname}! Your teacher will use your explanations to plan what's next." No scores, no labels.

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from app.api.deps import AIDep, AppSettings, CurrentStudent, DbSession
 from app.rate_limit import limit_public, limit_student
 from app.schemas import JoinIn, JoinOut, ReplyIn, ReplyOut, StudentOut
-from app.services.diagnosis_store import reply_to_follow_up
+from app.services.diagnosis_store import reply_to_follow_up, resume_follow_up
 from app.services.students import join_class, student_out
 
 router = APIRouter(prefix="/api", tags=["students"])
@@ -26,4 +26,11 @@ def reply(
     follow_up_id: int, body: ReplyIn, student: CurrentStudent, db: DbSession, ai: AIDep, settings: AppSettings
 ) -> ReplyOut:
     reply_to_follow_up(db, student, follow_up_id, body.reply, ai, settings)  # commits its own writes
+    return ReplyOut()
+
+
+@router.post("/follow-ups/{follow_up_id}/resume", dependencies=[Depends(limit_student)])
+def resume(follow_up_id: int, student: CurrentStudent, db: DbSession, ai: AIDep, settings: AppSettings) -> ReplyOut:
+    """Finish processing a saved reply (after a timeout, crash or failed save). Safe to repeat."""
+    resume_follow_up(db, student, follow_up_id, ai, settings)
     return ReplyOut()
