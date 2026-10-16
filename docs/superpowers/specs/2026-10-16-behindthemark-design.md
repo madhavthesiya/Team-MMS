@@ -73,7 +73,7 @@ Per submitted response:
    - `guessed` requires evidence (self-report, or explanation contradicts answer); otherwise `not_sure`.
    - `certainty < CERTAINTY_THRESHOLD` or rule/AI disagreement → `not_sure` → step 5.
    - **Follow-up evidence beats the answer-pattern rule.** Rules only see the answer string. On the second pass, a confident AI label whose quoted evidence comes *from the follow-up reply* settles the case even if the rule disagrees (`source=ai`); the rule's reading is kept as a `ruled_out` hypothesis. Evidence only from the first explanation does not overrule the rule.
-5. **Targeted follow-up.** Gemini proposes one question that discriminates between the top two hypotheses. Code rejects any follow-up containing the correct answer and falls back to a template ("Walk me through how you got {answer}"). The reply re-runs step 3 → new Diagnosis version. Max one follow-up; still unclear → `not_sure` for the teacher. Pending follow-ups are returned by `GET /api/students/me`, so a refresh never strands one.
+5. **Targeted follow-up.** Gemini proposes a short question and up to two alternatives to distinguish the top hypotheses. Code selects a brief, safe candidate or a hypothesis-specific fallback; if none is useful and safe, defer to the teacher. The reply re-runs step 3 → new Diagnosis version. Max one optional follow-up; still unclear → `not_sure`. Learners can decline without AI inference. Pending checks are recovered through `GET /api/students/me`. See the Riddle 3 delta below and API v1.4.
 
 **Time budget:** all model calls in one request share `AI_BUDGET_SECONDS` (30 s); each call's timeout is capped at what is left, a call is skipped with < 2 s left (rules / template question instead). The frontend waits 45 s.
 
@@ -138,3 +138,15 @@ How the build responds:
 - **Prompt:** `analysis-v2` adds timing facts, the story list and `would_confirm`.
 - **Concurrency (review item OPEN-01, fixed alongside):** replies are claimed atomically, committed before the model call, and the AI result is stored only if nothing newer than the follow-up's own version appeared meanwhile (row lock + re-check + unique version). If processing never finishes (timeout, crash, failed save), the follow-up stays in `pending_follow_ups` with `reply_saved: true` and `POST /api/follow-ups/{id}/resume` completes it.
 - **One entry per story:** hypotheses are reconciled by kind + misconception before saving; recorded timing can't be "ruled out" by the model, and an AI rejection of a code story is kept as that story's evidence-against.
+
+## 11. Riddle 3 — The Question That Separates (revealed 2026-10-17)
+
+One more interaction should distinguish possible explanations without repeating confusion or exhausting the learner. The purpose is understanding, not another score; people must retain control.
+
+- Keep the existing diagnostic quiz; do not introduce an unverified learning-path or practice engine.
+- Propose at most three small checks in the existing model call. Each has teacher-only rationale and predicted observations keyed to competing stories.
+- Select the shortest eligible check after deterministic length, repetition, judgement and direct-answer-leak checks. These are heuristics, not a proof of information gain or semantic safety.
+- Offer one optional, untimed check. Student choices: answer, not sure, skip, discuss with teacher. A choice to stop is not evidence of guessing or misunderstanding.
+- Store original evidence unchanged. Declines close the pending check, retain competing stories and leave `not_sure` unless a teacher already decided. Teacher overrides remain authoritative.
+- Show why the check was chosen, predictions versus actual reply/choice, and teacher controls. No useful safe check means teacher review, not a generic repeat question.
+- See [the Riddle 3 handoff](../plans/2026-10-17-riddle-3.md) for implementation and verification boundaries.

@@ -5,6 +5,7 @@ export type HypothesisKind = Exclude<Label, "not_sure">;
 export type Source = "rule" | "ai" | "both" | "teacher";
 export type Status = "open" | "settled" | "not_sure";
 export type HypStatus = "open" | "supported" | "ruled_out";
+export type DeclineReason = "skip" | "not_sure" | "teacher";
 
 export interface ClassCreated {
   class_id: number;
@@ -212,6 +213,13 @@ export interface FollowUpView {
   question_text: string;
   student_reply: string | null;
   answered_at: string | null;
+  rationale: string;
+  expected_evidence: {
+    kind: HypothesisKind;
+    misconception_id: number | null;
+    observation: string;
+  }[];
+  declined_reason: DeclineReason | "";
 }
 
 export interface TraceStep {

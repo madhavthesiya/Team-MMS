@@ -56,8 +56,8 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
       </div>
 
-      {/* Interactive WebGL GPU Swarm Cursor Overlay */}
-      <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
+      {/* Keep interactive decoration on the landing page, away from diagnostic work. */}
+      {isLanding && <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
         <SwarmCursor
           count={350}
           size={2.2}
@@ -76,7 +76,7 @@ export function Layout({ children }: { children: ReactNode }) {
           hideCursor={false}
           className="h-full w-full pointer-events-none"
         />
-      </div>
+      </div>}
 
       {/* Google Classroom Full-Width Navigation Header */}
       <header className="shrink-0 z-40 px-4 sm:px-6 lg:px-8 py-2 w-full border-b border-white/[0.08] bg-black/90 backdrop-blur-md">

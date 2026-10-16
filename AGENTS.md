@@ -28,6 +28,7 @@ The status document is a dated snapshot, not a live task manager. Verify its cla
 - AI labels are hypotheses for teachers, not student-facing verdicts. Student endpoints and screens must not expose answer keys, diagnoses, or teacher credentials.
 - A teacher override must remain authoritative, including when it arrives during an AI request: an AI re-read is stored only if the follow-up's diagnosis is still the latest version at save time (row lock, re-check, `UNIQUE(response_id, version)`; see `docs/status.md`).
 - Ask at most one follow-up per initial response. Recover pending follow-ups through `/api/students/me` before advancing a student to a new question; a saved reply whose processing didn't finish (`reply_saved: true`) is completed with `POST /api/follow-ups/{id}/resume`.
+- Follow-ups are optional: `decline` records `skip`, `not_sure`, or `teacher` without AI inference or changing correctness. Predicted replies (`expected_evidence`) and the selection rationale are teacher-only planning metadata, never observed evidence. Keep checks short and non-repetitive; an unavailable useful check means teacher review, not another test.
 - A confident diagnosis backed by a quote from the follow-up reply may resolve an answer-pattern disagreement. Preserve the ruled-out interpretation in history.
 - For a wrong answer, choose a story only after alternatives were weighed (`MIN_STORIES_WEIGHED`, `STORY_MARGIN` in `pipeline.py`). "Ran out of time" rests only on recorded timing, never on model inference. Keep one hypothesis per story.
 - Gemini failure must produce an honest, visibly rule-only fallback. Never substitute canned AI results.
@@ -40,7 +41,7 @@ The status document is a dated snapshot, not a live task manager. Verify its cla
 - Keep runtime configuration in `backend/app/config.py` and document new settings in `.env.example` without credentials.
 - Local development uses SQLite by default; production Postgres behavior, especially concurrency, needs its own verification.
 - `create_all()` never alters existing tables. Every schema change needs an additive, idempotent step in `backend/app/migrations.py` so deployed databases keep their data.
-- The frontend (`frontend/`, Vite + React) follows the Track B plan: typed API client, mobile layouts, and loading/error/empty states. As of 2026-10-17 it is still the unmodified Vite scaffold.
+- The frontend (`frontend/`, Vite + React) now has teacher/student screens and the Riddle 3 optional-check controls. Preserve the existing design and typed API client; verify mobile layouts and loading/error/empty states rather than assuming a production build proves usability.
 - Do not add infrastructure or dependencies just because a plan mentions them. Choose what the assigned change requires.
 
 ## Commands

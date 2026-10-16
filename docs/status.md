@@ -1,22 +1,24 @@
 # Project status
 
-**Inspected:** 2026-10-17, after the Riddle 2 and OPEN-01 changes (on top of `8b350eb`).
+**Inspected:** 2026-10-17, Riddle 3 implementation originally on `7df970e`, integrated with `origin/main` at `a5a0cfc` on branch `codex/riddle-3-optional-checks` for review.
 
 This is a point-in-time handoff. Recheck the current branch, filesystem, and tests before treating an item as current. Unchecked steps in an older implementation plan are not a reliable implementation inventory.
 
 ## Verified baseline
 
 - Backend: FastAPI, SQLAlchemy, Pydantic settings, Gemini transport, and the synthetic sample quiz are present.
-- API contract: version 1.1, including `pending_follow_ups`, split rate limits, and the intended request budget.
+- API contract: version 1.4, including optional diagnostic checks and learner declines, with teacher-only rationale and predicted observations.
 - Offline verification from `backend/`:
 
   ```powershell
   .venv/Scripts/python.exe -B -X utf8 -m pytest -o addopts= -q -p no:cacheprovider
   ```
 
-  Result: **130 passed, 3 skipped** (2026-10-17, including `test_ai_features.py` with trigger sanitization, composite failover, and empty class summary). All offline tests pass cleanly.
-- Live AI verification: Both Google Gemini (`gemini-3.5-flash-lite`, 5 keys) and Groq (`openai/gpt-oss-20b`, 7 keys) rotation pools tested end-to-end with live inference and automated failover (`CompositeAIClient`).
-- Frontend verification: `npm run build` completed with 0 errors. Full browser verification executed across all 3 AI features via automated subagent session.
+  Integrated result: **156 passed, 3 skipped** (2026-10-17, after resolving the four conflicts with `a5a0cfc`; 12.54 s). Prior Riddle 3 result was 148 passed, 3 skipped. `RUN_LIVE_AI` was empty. The three skipped tests require opt-in live Gemini access.
+- Frontend: the integrated `npm run build` passes (TypeScript + Vite); a >500 kB bundle warning remains. `npm run lint` exits successfully with 23 React hook/ref warnings; this is not a zero-warning baseline.
+- Browser: isolated local FastAPI app, in-memory SQLite, scripted test model, and the real production React bundle. All three decline choices, pending-check refresh, completion, teacher explanations and no horizontal overflow checked at 360 px and 1280 px. Mobile teacher panes now scroll as one page; decorative cursor particles are restricted to the landing page. This is not a live-Gemini or hosted-deployment check.
+- No live Gemini, hosted Postgres, deployment or classroom-load verification was performed during the Riddle 3 work or conflict integration.
+- Upstream verification record preserved from `a5a0cfc`: the team reported **130 passed, 3 skipped**, live Gemini/Groq rotation and composite failover, and browser verification of the three teacher AI tools. Those checks predate this merge and are not evidence that `followup-v2` was live-verified.
 
 ## Capability inventory
 
@@ -32,13 +34,14 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
 | Teacher precedence when override already exists | Implemented; sequential test passes | `test_teacher_decision_is_final_even_if_the_student_replies_later` |
 | Teacher precedence during an in-flight AI call | Fixed; regression tests pass on SQLite | OPEN-01 below; `tests/test_concurrency.py`; Postgres row-lock behaviour not yet verified |
 | Riddle 2: several stories per wrong answer (timing story, weigh-before-choosing gate, `would_confirm`, same-wrong-answer view) | Implemented; offline tests pass | `services/pipeline.py`, `rule_matcher.py`, `results.py`, `tests/test_riddle2_stories.py`; API contract v1.3 |
+| Riddle 3: one brief optional check, teacher rationale/predictions, learner choice | Implemented; offline/API and local browser checks pass | `services/followups.py`, `tests/test_riddle3_followups.py`, [handoff](superpowers/plans/2026-10-17-riddle-3.md); API v1.4 |
 | Public/student rate-limit split | Implemented; offline tests pass | `backend/app/rate_limit.py`, `test_basics.py` |
 | Shared AI budget and per-call cap | Implemented; scripted timing tests pass | `backend/app/services/pipeline.py`, `ai/client.py`; real elapsed validation pending |
-| React frontend and browser flows | Fully implemented with studio-grade Google Classroom UX, MagicBento landing, full Riddle 2 capabilities, zero hardcoded dummy data, and 3 live AI tools | `frontend/`, `npm run build` passes with 0 errors |
-| Blocked-localStorage fallback | Implemented with in-memory map fallback for private/restricted browsing | `frontend/src/lib/storage.ts` |
-| Labelled evaluation cases/runner/reports | Runner and 51 cases exist; confusion matrix report recorded | `eval/cases.jsonl`, `eval/run_eval.py`, `eval/results/` |
-| Live Gemini schema/integration checks | Tests exist; rotation pools & failover verified | `backend/tests/test_gemini_live.py`, `backend/app/ai/client.py` |
-| CI, Docker, hosting blueprint, smoke scripts | All passing: GitHub Actions CI green (28s), multi-stage Docker container verified, smoke scripts pass | `.github/workflows/tests.yml`, `Dockerfile`, `render.yaml`, `scripts/smoke.*` |
+| React frontend and browser flows | Teacher/student screens exist; production build and targeted Riddle 3 browser checks pass. Not an exhaustive UI audit | `frontend/`; test-only browser harness below |
+| Blocked-localStorage fallback | Implemented in `frontend/src/lib/storage.ts`; blocked-storage behavior not browser-tested in this pass | Verify separately |
+| Labelled evaluation cases/runner/reports | Runner and 51 cases exist; upstream reports a confusion matrix; not rerun in this integration | `eval/cases.jsonl`, `eval/run_eval.py`, `eval/results/` |
+| Live Gemini schema/integration checks | Tests exist; upstream reports provider-pool/failover checks; Riddle 3 live quality remains unverified | `backend/tests/test_gemini_live.py`, `backend/app/ai/client.py` |
+| CI, Docker, hosting blueprint, smoke scripts | Upstream reports CI green (28s), Docker and smoke checks; not rerun in this integration | `.github/workflows/tests.yml`, `Dockerfile`, `render.yaml`, `scripts/smoke.*` |
 
 ## Fixed after the review of `00fef16` (2026-10-17)
 
@@ -52,6 +55,20 @@ This is a point-in-time handoff. Recheck the current branch, filesystem, and tes
 Upgrade path verified on SQLite only; run it once against the hosted Postgres before the freeze.
 
 ## Known issues
+
+### Riddle 3 verification boundaries
+
+- `followup-v2` candidate quality and non-leading language have not been assessed against live Gemini. Word count and pattern filters are heuristics, not measured information gain or semantic guarantees.
+- New schema defaults, learner choices and write interleavings were checked on SQLite only; hosted Postgres still needs verification.
+- Earlier review findings remain outside this Riddle 3 change: eval `--rule-only` still selects the configured AI client when a key exists; resume lacks a processing lease and can race an in-flight reread; a failed version-index upgrade is logged rather than preventing startup. Resolve these before relying on live evaluation or concurrent production use.
+- README deployment/video/pack links have not been verified in this pass. Do not treat them as confirmed artifacts.
+
+### Reproduce the targeted browser check
+
+1. Build `frontend/` with `npm ci` then `npm run build`.
+2. From `backend/`, run `.venv/Scripts/python.exe -B -X utf8 -m uvicorn tests.browser_riddle3_app:app --host 127.0.0.1 --port 8017 --no-access-log`.
+3. From the root, run `node backend/tests/browser_riddle3.cjs <path-to-playwright-module>`. Set `BTM_BROWSER_PATH` when using an existing Chromium executable; optionally set `BTM_SCREENSHOT_DIR` to an existing temporary output folder.
+4. Stop the test server afterward. It uses only an in-memory DB and a scripted model inside `backend/tests/`; never deploy that module. No production `.env`, local classroom DB or real student data is used.
 
 ### OPEN-01: teacher override can lose to an in-flight AI reread — fixed 2026-10-17 (SQLite verified)
 
@@ -69,12 +86,12 @@ This interleaving was reproduced during the preceding review with a synthetic AI
 
 ### OPEN-02: release and data-handling checks remain unverified
 
-There is no real-model evaluation report, browser run, deployed smoke result, or hosted database concurrency result in this baseline. Regex PII redaction also does not cover every prompt field; see [security boundaries](../SECURITY.md). These are explicit gaps, not evidence that the prototype has been audited or is ready for real student data.
+Upstream reports provider-pool, CI, Docker and smoke verification as recorded above; those results have not been independently rechecked in this integration. Riddle 3 live-model quality and hosted database concurrency remain unverified. The local browser check covers the Riddle 3 flow with a scripted model. Regex PII redaction also does not cover every prompt field; see [security boundaries](../SECURITY.md). These are explicit gaps, not evidence that the prototype has been audited or is ready for real student data.
 
 ## Immediate handoff
 
 1. Verify OPEN-01 behaviour and the schema upgrade on hosted Postgres (SQLite tests pass).
-2. Build the Track B frontend against API v1.3: pending follow-ups with `reply_saved`/resume, timer with auto-submit, same-wrong-answer view, in-memory token fallback.
+2. Review the local Riddle 3 diff and exercise the remaining frontend flows (timed auto-submit, real failed-reply recovery, blocked storage, teacher override) against API v1.4.
 3. Run the eval and the live Gemini tests with a real key; record the results.
 4. Deploy, run the smoke script against the live URL, and record it here.
 

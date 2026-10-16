@@ -5,6 +5,7 @@ import type {
   AISummaryOut,
   ClassCreated,
   ClassInfo,
+  DeclineReason,
   JoinResult,
   OverrideIn,
   Quiz,
@@ -121,6 +122,10 @@ export const api = {
       undefined,
       { student: token },
       45000
+    ),
+  declineFollowUp: (token: string, followUpId: number, reason: DeclineReason) =>
+    request<{ status: "done" }>(
+      "POST", `/follow-ups/${followUpId}/decline`, { reason }, { student: token }
     ),
   aiGenerateQuestion: (classId: number, token: string, body: AIGenerateQuestionIn) =>
     request<AIGenerateQuestionOut>(

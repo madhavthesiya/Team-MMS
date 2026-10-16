@@ -169,6 +169,10 @@ class ReplyIn(BaseModel):
     reply: Str1000
 
 
+class DeclineIn(BaseModel):
+    reason: Literal["skip", "not_sure", "teacher"]
+
+
 class ReplyOut(BaseModel):
     status: Literal["done"] = "done"
 
@@ -267,10 +271,19 @@ class HistoryEntry(BaseModel):
     created_at: datetime
 
 
+class ExpectedEvidenceView(BaseModel):
+    kind: HypothesisKind
+    misconception_id: int | None
+    observation: str
+
+
 class FollowUpView(BaseModel):
     question_text: str
     student_reply: str | None
     answered_at: datetime | None
+    rationale: str = ""
+    expected_evidence: list[ExpectedEvidenceView] = Field(default_factory=list)
+    declined_reason: str = ""
 
 
 class TraceView(BaseModel):

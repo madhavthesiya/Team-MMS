@@ -179,6 +179,9 @@ class FollowUp(Base):
     diagnosis_id: Mapped[int] = mapped_column(ForeignKey("diagnoses.id", ondelete="CASCADE"), unique=True)
     question_text: Mapped[str] = mapped_column(Text)
     discriminates: Mapped[list[str]] = mapped_column(JSON, default=list)
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    expected_evidence: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    declined_reason: Mapped[str] = mapped_column(String(24), default="")
     student_reply: Mapped[str | None] = mapped_column(Text, nullable=True)
     answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

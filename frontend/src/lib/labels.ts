@@ -71,7 +71,7 @@ export function sourceText(source: Source): string {
     case "ai":
       return "AI analysis";
     case "both":
-      return "Rules & AI agree";
+      return "Rules + AI";
     case "teacher":
       return "Teacher verified";
   }

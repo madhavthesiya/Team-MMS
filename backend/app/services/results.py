@@ -175,6 +175,9 @@ def response_detail(response: Response) -> ResponseDetail:
             question_text=follow_up.question_text,
             student_reply=follow_up.student_reply,
             answered_at=follow_up.answered_at,
+            rationale=follow_up.rationale,
+            expected_evidence=follow_up.expected_evidence,
+            declined_reason=follow_up.declined_reason,
         )
         if follow_up
         else None,
