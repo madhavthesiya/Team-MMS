@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: behindthemark
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: RATE_LIMIT_PUBLIC
+        value: 120/minute
+      - key: RATE_LIMIT_STUDENT
+        value: 20/minute
