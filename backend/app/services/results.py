@@ -15,12 +15,15 @@ from app.schemas import (
     QuestionResults,
     ResponseDetail,
     ResultsOut,
+    StoryCount,
     StudentEntry,
     TraceView,
+    WrongAnswerGroup,
 )
 from app.services.classrooms import question_out
+from app.services.normalizer import normalize_answer
 
-LABEL_ORDER = ["understood", "misread", "misconception", "guessed", "slip", "not_sure"]
+LABEL_ORDER = ["understood", "misread", "misconception", "guessed", "slip", "out_of_time", "not_sure"]
 
 
 def _misconception_names(question: Question) -> dict[int, str]:
@@ -43,6 +46,35 @@ def _entry(r: Response, names: dict[int, str]) -> StudentEntry:
         status=d.status,
         source=d.source,
     )
+
+
+def _wrong_answer_groups(question: Question, responses: list[Response], names: dict[int, str]) -> list[WrongAnswerGroup]:
+    """Group wrong answers by value ("0.2" and "1/5" are the same answer) and list the stories behind each."""
+    groups: dict[str, list[Response]] = defaultdict(list)
+    for r in responses:
+        if not r.is_correct:
+            groups[normalize_answer(r.answer_raw, question.answer_type)].append(r)
+    out = []
+    for same in sorted(groups.values(), key=len, reverse=True):
+        entries = sorted((_entry(r, names) for r in same), key=lambda e: e.nickname.casefold())
+        counts: dict[tuple[str, str | None], int] = defaultdict(int)
+        for e in entries:
+            counts[(e.label, e.misconception_label)] += 1
+        stories = [
+            StoryCount(label=label, misconception_label=mlabel, count=n)
+            for (label, mlabel), n in sorted(counts.items(), key=lambda kv: (LABEL_ORDER.index(kv[0][0]), kv[0][1] or ""))
+        ]
+        decided = {(s.label, s.misconception_label) for s in stories if s.label != "not_sure"}
+        out.append(
+            WrongAnswerGroup(
+                answer=same[0].answer_raw.strip(),
+                count=len(same),
+                several_stories=len(decided) > 1,
+                stories=stories,
+                students=entries,
+            )
+        )
+    return out
 
 
 def build_results(db: Session, cls: ClassRoom) -> ResultsOut:
@@ -69,6 +101,7 @@ def build_results(db: Session, cls: ClassRoom) -> ResultsOut:
                 if by_label[label]
             ]
             groups.append(CorrectnessGroup(is_correct=is_correct, count=len(entries), labels=labels))
+        wrong_answers = _wrong_answer_groups(question, by_question[question.id], names)
         questions.append(
             QuestionResults(
                 question_id=question.id,
@@ -77,7 +110,9 @@ def build_results(db: Session, cls: ClassRoom) -> ResultsOut:
                 correct_answer=question.correct_answer,
                 total_responses=len(by_question[question.id]),
                 same_score_different_reasons=any(len(g.labels) > 1 for g in groups),
+                same_wrong_answer_different_stories=any(w.several_stories for w in wrong_answers),
                 groups=groups,
+                wrong_answers=wrong_answers,
             )
         )
 
@@ -107,6 +142,7 @@ def _diagnosis_view(d: Diagnosis, names: dict[int, str]) -> DiagnosisView:
                 evidence_against=h.evidence_against,
                 likelihood=h.likelihood,
                 status=h.status,
+                would_confirm=h.would_confirm,
             )
             for h in d.hypotheses
         ],
@@ -125,6 +161,9 @@ def response_detail(response: Response) -> ResponseDetail:
         explanation=response.explanation_raw,
         self_confidence=response.self_confidence,
         is_correct=response.is_correct,
+        time_spent_seconds=response.time_spent_seconds,
+        timed_out=response.timed_out,
+        ran_out_of_time=response.reported_out_of_time,
         created_at=response.created_at,
         diagnosis=_diagnosis_view(response.current_diagnosis, names),
         history=[

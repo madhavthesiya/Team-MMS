@@ -30,6 +30,7 @@ def student_out(student: Student) -> StudentOut:
                 StudentQuestionOut(
                     question_id=q.id, position=q.position, prompt=q.prompt,
                     answer_type=q.answer_type, choices=list(q.choices),
+                    time_limit_seconds=q.time_limit_seconds,
                 )
                 for q in quiz.questions
             ],

@@ -122,3 +122,18 @@ Mobile-first (Tailwind). Every data view has loading, error (with retry) and emp
 - **C — Eval + ops:** eval set and runner, deploy (Render/Neon/UptimeRobot) in hour 1, README, Frontend Pack, video. (If two people, A takes deploy, B takes README/Pack.)
 
 **Order:** scaffold + deploy hello-world first (hour 1) → core R1 flow end to end → eval → adapt to new riddles as they are revealed → README/Pack/video → tag before 9:00.
+
+## 10. Riddle 2 — One Error, Several Stories (revealed 2026-10-17)
+
+> Three learners choose the same wrong answer: one followed a mistaken rule, one missed a condition in the question, one ran out of time. Whoever looks usually picks the first story that comes to mind. What would it take to treat a mistake as a clue instead of a verdict, and what would you need to see before choosing a story?
+
+How the build responds:
+
+- **Three stories, named as in the riddle.** `misconception` → "Mistaken rule", `misread` → "Missed a condition in the question", new `out_of_time` → "Ran out of time" (plus `slip`, `guessed`).
+- **"Ran out of time" rests on recorded facts, not AI inference.** Optional per-question `time_limit_seconds`; the student screen counts down and auto-submits with `timed_out`; students can tick "I ran out of time"; `time_spent_seconds` is stored. Code adds the timing story; the AI may only choose it when those facts exist (guardrail).
+- **A clue, not a verdict.** For a wrong answer the AI must weigh every story and return the rejected ones with a reason (`alternatives_ruled_out`). Code chooses a story only if at least 3 stories were weighed and the chosen one leads the next by ≥ 0.2 likelihood (`MIN_STORIES_WEIGHED`, `STORY_MARGIN` in `pipeline.py`); otherwise the stories stay open and one follow-up separates them. Without the AI, two competing code stories (e.g. trigger answer + timer) are never decided by rules alone.
+- **What you'd need to see.** Every hypothesis carries `would_confirm` (from the AI, or fixed text for code stories, e.g. "give the same question again with no time limit").
+- **Teacher view.** Results group wrong answers by value — "3 students answered 1/5: mistaken rule ×1 · missed a condition ×1 · ran out of time ×1" (`wrong_answers`, `several_stories`). Response detail lists every story considered: chosen, still possible, ruled out (with reason), each with what would confirm it.
+- **Data model additions:** `Question.time_limit_seconds`; `Response.time_spent_seconds`, `timed_out`, `reported_out_of_time`; `Hypothesis.would_confirm`; `UNIQUE(response_id, version)` on `Diagnosis`. No migrations: a database created before this change must be recreated.
+- **Prompt:** `analysis-v2` adds timing facts, the story list and `would_confirm`.
+- **Concurrency (review item OPEN-01, fixed alongside):** replies are claimed atomically, committed before the model call, and the AI result is stored only if no teacher reading appeared meanwhile (row lock + re-check + unique version).

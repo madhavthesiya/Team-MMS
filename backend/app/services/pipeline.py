@@ -4,11 +4,14 @@ A pure function of its inputs (no database), so tests and the eval runner call i
 Every step appends a TraceStep, which the teacher sees under "Why this label?".
 
 Decision policy:
+- A mistake is a clue, not a verdict. For a wrong answer we only choose a story after weighing
+  alternatives: at least MIN_STORIES_WEIGHED stories considered, and the chosen one ahead of the
+  next by STORY_MARGIN. Otherwise the stories stay open and we ask one follow-up.
 - Settle when the AI is confident AND agrees with the rules (or the rules had no opinion).
 - Rules only look at the answer string. A follow-up reply is direct evidence about the reasoning,
   so on the second pass a confident AI label whose quoted evidence comes FROM THE REPLY settles
   the case even against the rule; the rule's reading is kept as a ruled-out hypothesis.
-- Otherwise: ask one follow-up (first pass) or send to the teacher as not_sure (second pass).
+- "Ran out of time" rests on recorded timing (timer or student report), never on AI inference.
 - All AI calls share one time budget; when it runs out we fall back to rules / a template question.
 """
 import time
@@ -28,12 +31,14 @@ from app.ai.schemas import AIAnalysis, AIFollowUp
 from app.domain import HypothesisOut, Label, QuestionSpec, RuleResult, Source, Status, StudentWork, TraceStep
 from app.services.guardrails import GuardedAnalysis, apply_guardrails, leaks_answer, looks_like_injection, quote_in
 from app.services.redact import redact_pii
-from app.services.rule_matcher import rule_diagnose
+from app.services.rule_matcher import RULE_CERTAINTY, rule_diagnose, rule_would_confirm, timing_hypothesis
 
-# Rules alone are weak evidence; these certainties keep rule-only labels visibly tentative.
-RULE_CERTAINTY: dict[str, float] = {"understood": 0.5, "guessed": 0.6, "misconception": 0.6, "not_sure": 0.0}
 # Don't start an AI call with less time than this left in the budget.
 MIN_CALL_SECONDS = 2.0
+# Before choosing one story for a wrong answer: how many stories must have been weighed,
+# and how far ahead of the next story the chosen one must be.
+MIN_STORIES_WEIGHED = 3
+STORY_MARGIN = 0.2
 
 Clock = Callable[[], float]
 
@@ -66,7 +71,11 @@ def _ms(start: float) -> int:
     return int((time.perf_counter() - start) * 1000)
 
 
-def _rule_hypothesis(rule: RuleResult, status: str = "open") -> HypothesisOut:
+def _key(h: HypothesisOut) -> tuple[str, int | None]:
+    return h.kind, h.misconception_id
+
+
+def _rule_hypothesis(question: QuestionSpec, rule: RuleResult, status: str = "open") -> HypothesisOut:
     return HypothesisOut(
         kind=rule.label,
         misconception_id=rule.misconception_id,
@@ -74,23 +83,44 @@ def _rule_hypothesis(rule: RuleResult, status: str = "open") -> HypothesisOut:
         evidence_against="",
         likelihood=RULE_CERTAINTY[rule.label],
         status=status,
+        would_confirm=rule_would_confirm(question, rule),
     )
 
 
 def _from_rule(
-    rule: RuleResult, trace: list[TraceStep], *, ai_available: bool, reason: str, force_not_sure: bool = False
+    question: QuestionSpec,
+    work: StudentWork,
+    rule: RuleResult,
+    trace: list[TraceStep],
+    *,
+    ai_available: bool,
+    reason: str,
+    force_not_sure: bool = False,
 ) -> DiagnosisOutcome:
-    label: Label = "not_sure" if force_not_sure else rule.label
-    hypotheses = () if rule.label == "not_sure" else (_rule_hypothesis(rule, "open" if force_not_sure else "supported"),)
+    """Result from code-owned evidence only. With two competing code stories we don't pick one."""
+    stories = [] if rule.label == "not_sure" else [_rule_hypothesis(question, rule)]
+    timing = timing_hypothesis(question, work, rule.is_correct)
+    if timing is not None and all(_key(h) != _key(timing) for h in stories):
+        stories.append(timing)
+    stories.sort(key=lambda h: h.likelihood, reverse=True)
+
+    if force_not_sure or len(stories) != 1:
+        label: Label = "not_sure"
+        if len(stories) > 1:
+            reason += f" ({len(stories)} stories fit: not choosing one without more evidence)"
+    else:
+        label = stories[0].kind
+        stories = [replace(stories[0], status="supported")]
     trace.append(TraceStep("decision", "code", True, 0, detail=reason))
+    chosen = stories[0] if label != "not_sure" else None
     return DiagnosisOutcome(
         is_correct=rule.is_correct,
         label=label,
-        certainty=RULE_CERTAINTY[label],
+        certainty=chosen.likelihood if chosen else 0.0,
         source="rule",
         status="not_sure" if label == "not_sure" else "settled",
-        misconception_id=rule.misconception_id if label == "misconception" else None,
-        hypotheses=hypotheses,
+        misconception_id=chosen.misconception_id if chosen and label == "misconception" else None,
+        hypotheses=tuple(stories),
         follow_up_question=None,
         follow_up_discriminates=(),
         ai_available=ai_available,
@@ -113,6 +143,21 @@ def _backs_label(h: HypothesisOut, guarded: GuardedAnalysis) -> bool:
 def _reply_backs_label(guarded: GuardedAnalysis, reply: str | None) -> bool:
     """True if the AI's chosen label is supported by a quote taken from the follow-up reply."""
     return bool(reply) and any(_backs_label(h, guarded) and quote_in(h.evidence_for, reply) for h in guarded.hypotheses)
+
+
+def _story_gate(guarded: GuardedAnalysis, stories: tuple[HypothesisOut, ...], rule: RuleResult) -> str | None:
+    """For a wrong answer: None if alternatives were weighed and the chosen story is clearly ahead,
+    otherwise the reason we must keep the stories open."""
+    weighed = {h.kind for h in stories} | {h.kind for h in guarded.ruled_out}
+    if rule.label != "not_sure":
+        weighed.add(rule.label)
+    if len(weighed) < MIN_STORIES_WEIGHED:
+        return f"only {len(weighed)} of the possible stories were weighed; need {MIN_STORIES_WEIGHED} before choosing"
+    chosen = max((h.likelihood for h in stories if _backs_label(h, guarded)), default=0.0)
+    runner_up = max((h.likelihood for h in stories if not _backs_label(h, guarded)), default=0.0)
+    if chosen - runner_up < STORY_MARGIN:
+        return f"'{guarded.label}' ({chosen:.2f}) is not clearly ahead of the next story ({runner_up:.2f})"
+    return None
 
 
 def _analyse(
@@ -193,56 +238,69 @@ def run_diagnosis(
 
     if looks_like_injection(f"{work.explanation}\n{work.follow_up_reply or ''}"):
         trace.append(TraceStep("guardrails", "code", True, 0, detail="student text looks like instructions to the AI; AI skipped"))
-        return _from_rule(rule, trace, ai_available=True, force_not_sure=True,
+        return _from_rule(question, work, rule, trace, ai_available=True, force_not_sure=True,
                           reason="possible instruction injection → not sure, teacher should look")
 
     analysis = _analyse(question, work, rule, ai, trace, budget)
     if analysis is None:
-        return _from_rule(rule, trace, ai_available=False, reason="AI unavailable → rule-based result only")
+        return _from_rule(question, work, rule, trace, ai_available=False, reason="AI unavailable → rule-based result only")
 
     start = time.perf_counter()
     guarded = apply_guardrails(analysis, question, work, rule.is_correct)
     trace.append(TraceStep("guardrails", "code", True, _ms(start), detail="; ".join(guarded.notes) or "all evidence checked out"))
 
+    # Every story with evidence: the AI's, plus the timing story the code owns.
+    stories = guarded.hypotheses
+    timing = timing_hypothesis(question, work, rule.is_correct)
+    if timing is not None and all(_key(h) != _key(timing) for h in stories):
+        stories = tuple(sorted((*stories, timing), key=lambda h: h.likelihood, reverse=True))
+
     confident = guarded.label != "not_sure" and guarded.certainty >= threshold
     agrees = _agrees(rule, guarded)
     reply_settles = confident and not agrees and _reply_backs_label(guarded, work.follow_up_reply)
-    if confident and (agrees or reply_settles):
-        hypotheses = tuple(replace(h, status="supported") if _backs_label(h, guarded) else h for h in guarded.hypotheses)
+    gate = _story_gate(guarded, stories, rule) if confident and not rule.is_correct else None
+
+    if confident and (agrees or reply_settles) and gate is None:
+        settled = tuple(replace(h, status="supported") if _backs_label(h, guarded) else h for h in stories)
         source: Source = "both" if rule.label == guarded.label else "ai"
         if reply_settles:
-            ruled_out = _rule_hypothesis(rule, "ruled_out")
-            hypotheses = (
-                *(h for h in hypotheses if not (h.kind == rule.label and h.misconception_id == rule.misconception_id)),
-                ruled_out,
+            settled = (
+                *(h for h in settled if _key(h) != (rule.label, rule.misconception_id)),
+                _rule_hypothesis(question, rule, "ruled_out"),
             )
             detail = f"follow-up reply supports '{guarded.label}' over the answer-pattern rule ('{rule.label}')"
         else:
             detail = f"settled as '{guarded.label}' ({source})"
         trace.append(TraceStep("decision", "code", True, 0, detail=detail))
         return DiagnosisOutcome(rule.is_correct, guarded.label, guarded.certainty, source, "settled",
-                                guarded.misconception_id, hypotheses, None, (), True, tuple(trace))
+                                guarded.misconception_id, (*settled, *guarded.ruled_out), None, (), True, tuple(trace))
 
-    reason = f"rules say '{rule.label}', AI says '{guarded.label}'" if confident else "AI not confident enough"
-    hypotheses = guarded.hypotheses
+    if gate is not None:
+        reason = gate
+    elif confident:
+        reason = f"rules say '{rule.label}', AI says '{guarded.label}'"
+    else:
+        reason = "AI not confident enough"
+    hypotheses = stories
     rule_h: HypothesisOut | None = None
     if rule.label != "not_sure":
-        rule_h = next((h for h in hypotheses if h.kind == rule.label and h.misconception_id == rule.misconception_id), None)
+        rule_h = next((h for h in hypotheses if _key(h) == (rule.label, rule.misconception_id)), None)
         if rule_h is None:
-            rule_h = _rule_hypothesis(rule)
+            rule_h = _rule_hypothesis(question, rule)
             hypotheses = (*hypotheses, rule_h)
 
     if not allow_follow_up:
         trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → not sure, sent to the teacher"))
         return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "not_sure",
-                                None, hypotheses, None, (), True, tuple(trace))
+                                None, (*hypotheses, *guarded.ruled_out), None, (), True, tuple(trace))
 
-    if confident and rule_h is not None:  # a real disagreement: ask the question that separates the two views
-        ai_h = next(h for h in hypotheses if h.kind == guarded.label and h is not rule_h)
+    if confident and not agrees and rule_h is not None:  # rule vs AI: ask what separates the two views
+        ai_h = next(h for h in hypotheses if _backs_label(h, guarded) and h is not rule_h)
         top_two = (ai_h, rule_h)
     else:
         top_two = hypotheses[:2]
     question_text = _follow_up(question, work, rule, top_two, ai, trace, budget)
     trace.append(TraceStep("decision", "code", True, 0, detail=f"{reason} → asked one follow-up"))
-    return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "open", None, hypotheses,
-                            question_text, tuple(h.kind for h in top_two), True, tuple(trace))
+    return DiagnosisOutcome(rule.is_correct, "not_sure", guarded.certainty, "both", "open", None,
+                            (*hypotheses, *guarded.ruled_out), question_text, tuple(h.kind for h in top_two),
+                            True, tuple(trace))

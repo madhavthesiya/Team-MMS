@@ -10,10 +10,20 @@ class AIHypothesis(BaseModel):
     evidence_quote: str = Field(default="", max_length=600)
     evidence_against: str = Field(default="", max_length=600)
     likelihood: float = Field(ge=0, le=1)
+    would_confirm: str = Field(default="", max_length=300)
+
+
+class AIRuledOut(BaseModel):
+    """A story the model weighed and rejected, with the reason it does not fit."""
+
+    kind: HypothesisKind
+    misconception_id: int | None = None
+    reason: str = Field(min_length=1, max_length=400)
 
 
 class AIAnalysis(BaseModel):
     hypotheses: list[AIHypothesis] = Field(default_factory=list, max_length=6)
+    alternatives_ruled_out: list[AIRuledOut] = Field(default_factory=list, max_length=8)
     label: Label
     certainty: float = Field(ge=0, le=1)
     misconception_id: int | None = None

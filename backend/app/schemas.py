@@ -49,6 +49,7 @@ class QuestionIn(BaseModel):
     key_idea: Str1000
     choices: list[Str100] = Field(default_factory=list, max_length=6)
     misconceptions: list[MisconceptionIn] = Field(default_factory=list, max_length=6)
+    time_limit_seconds: int | None = Field(default=None, ge=10, le=3600)
 
     @model_validator(mode="after")
     def _consistent(self) -> "QuestionIn":
@@ -87,6 +88,7 @@ class QuestionOut(BaseModel):
     key_idea: str
     choices: list[str]
     misconceptions: list[MisconceptionOut]
+    time_limit_seconds: int | None
 
 
 class QuizOut(BaseModel):
@@ -118,6 +120,7 @@ class StudentQuestionOut(BaseModel):
     prompt: str
     answer_type: AnswerType
     choices: list[str]
+    time_limit_seconds: int | None
 
 
 class StudentQuizOut(BaseModel):
@@ -150,6 +153,9 @@ class ResponseIn(BaseModel):
     answer: Str100
     explanation: OptStr2000 = ""
     self_confidence: Confidence
+    time_spent_seconds: int | None = Field(default=None, ge=0, le=7200)
+    timed_out: bool = False  # the question's timer hit zero and the app auto-submitted
+    ran_out_of_time: bool = False  # the student ticked "I ran out of time"
 
 
 class FollowUpOut(BaseModel):
@@ -189,6 +195,22 @@ class LabelGroup(BaseModel):
     students: list[StudentEntry]
 
 
+class StoryCount(BaseModel):
+    label: Label
+    misconception_label: str | None
+    count: int
+
+
+class WrongAnswerGroup(BaseModel):
+    """Everyone who gave the same wrong answer, and the different stories behind it."""
+
+    answer: str
+    count: int
+    several_stories: bool
+    stories: list[StoryCount]
+    students: list[StudentEntry]
+
+
 class CorrectnessGroup(BaseModel):
     is_correct: bool
     count: int
@@ -202,7 +224,9 @@ class QuestionResults(BaseModel):
     correct_answer: str
     total_responses: int
     same_score_different_reasons: bool
+    same_wrong_answer_different_stories: bool
     groups: list[CorrectnessGroup]
+    wrong_answers: list[WrongAnswerGroup]
 
 
 class ResultsOut(BaseModel):
@@ -220,6 +244,7 @@ class HypothesisView(BaseModel):
     evidence_against: str
     likelihood: float
     status: HypStatus
+    would_confirm: str
 
 
 class DiagnosisView(BaseModel):
@@ -270,6 +295,9 @@ class ResponseDetail(BaseModel):
     explanation: str
     self_confidence: Confidence
     is_correct: bool
+    time_spent_seconds: int | None
+    timed_out: bool
+    ran_out_of_time: bool
     created_at: datetime
     diagnosis: DiagnosisView
     history: list[HistoryEntry]

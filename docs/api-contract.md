@@ -1,5 +1,7 @@
-# BehindTheMark — API Contract (v1.1)
+# BehindTheMark — API Contract (v1.2)
 
+> v1.2 (Riddle 2 — One Error, Several Stories): new label `out_of_time`; optional per-question `time_limit_seconds`; submit takes `time_spent_seconds`, `timed_out`, `ran_out_of_time`; hypotheses carry `would_confirm` and rejected stories (`status: ruled_out`); results add `wrong_answers` (same wrong answer → its different stories); UI copy for `misread` is now "Missed a condition in the question".
+>
 > v1.1: `pending_follow_ups` on join/me; submit budget is ≤30 s; rate limits split (public per IP, student per token).
 
 Shared contract between backend (Track A) and frontend (Track B). Change it only by agreement; bump the version line when you do.
@@ -15,15 +17,15 @@ Shared contract between backend (Track A) and frontend (Track B). Change it only
 ```
 AnswerType     = "number" | "text" | "choice"
 Confidence     = "sure" | "unsure" | "guessed"
-Label          = "understood" | "misread" | "misconception" | "guessed" | "slip" | "not_sure"
-HypothesisKind = "understood" | "misread" | "misconception" | "guessed" | "slip"
+Label          = "understood" | "misread" | "misconception" | "guessed" | "slip" | "out_of_time" | "not_sure"
+HypothesisKind = "understood" | "misread" | "misconception" | "guessed" | "slip" | "out_of_time"
 Source         = "rule" | "ai" | "both" | "teacher"
 Status         = "open" | "settled" | "not_sure"     # open = waiting for follow-up reply
 HypStatus      = "open" | "supported" | "ruled_out"
 ```
 
 UI copy for labels (use these words; never show raw enum to users):
-`understood` → "Understood" · `misread` → "Misread the question" · `misconception` → "Misconception: {misconception_label}" · `guessed` → "Likely guessed" · `slip` → "Careless slip" · `not_sure` → "Not sure yet".
+`understood` → "Understood" · `misread` → "Missed a condition in the question" · `misconception` → "Mistaken rule: {misconception_label}" · `guessed` → "Likely guessed" · `slip` → "Careless slip" · `out_of_time` → "Ran out of time" · `not_sure` → "Several stories — not chosen yet".
 
 ---
 
@@ -70,6 +72,7 @@ Body:
       "answer_type": "number",
       "key_idea": "Use a common denominator: 1/2 = 2/4, so 2/4 + 1/4 = 3/4.",
       "choices": [],
+      "time_limit_seconds": 60,
       "misconceptions": [
         {"label": "Adds tops and bottoms", "trigger_answers": ["2/6"], "signal_text": "Adds numerators and denominators separately", "remedy_hint": "Show with fraction strips why quarters and halves can't be added directly"}
       ]
@@ -77,14 +80,14 @@ Body:
   ]
 }
 ```
-Limits: 1–20 questions; prompt ≤1000; correct_answer ≤100; key_idea ≤1000; ≤6 choices; ≤6 misconceptions; ≤10 trigger answers each; signal/remedy ≤500. `choice` questions need ≥2 choices and `correct_answer` must be one of them.
+`time_limit_seconds` is optional (10–3600, or `null` for no timer). Limits: 1–20 questions; prompt ≤1000; correct_answer ≤100; key_idea ≤1000; ≤6 choices; ≤6 misconceptions; ≤10 trigger answers each; signal/remedy ≤500. `choice` questions need ≥2 choices and `correct_answer` must be one of them.
 `200` → **Quiz**:
 ```json
 {
   "quiz_id": 1, "topic": "Fractions", "title": "Adding and comparing fractions",
   "questions": [
     {"question_id": 1, "position": 1, "prompt": "...", "correct_answer": "3/4", "answer_type": "number",
-     "key_idea": "...", "choices": [],
+     "key_idea": "...", "choices": [], "time_limit_seconds": 60,
      "misconceptions": [{"misconception_id": 1, "label": "...", "trigger_answers": ["2/6"], "signal_text": "...", "remedy_hint": "..."}]}
   ]
 }
@@ -102,7 +105,7 @@ Body `{"join_code": "k7pq2m", "nickname": "Asha"}` (code case-insensitive; nickn
 {
   "student_id": 9, "student_token": "s3...secret", "nickname": "Asha", "class_name": "7B Maths",
   "quiz": {"topic": "Fractions", "title": "...", "questions": [
-    {"question_id": 1, "position": 1, "prompt": "What is 1/2 + 1/4?", "answer_type": "number", "choices": []}
+    {"question_id": 1, "position": 1, "prompt": "What is 1/2 + 1/4?", "answer_type": "number", "choices": [], "time_limit_seconds": 60}
   ]},
   "answered_question_ids": [],
   "pending_follow_ups": []
@@ -122,9 +125,10 @@ Student quiz never includes correct answers, key ideas or misconceptions. `quiz`
 ### `POST /api/responses` · student
 Body:
 ```json
-{"question_id": 1, "answer": "3/4", "explanation": "I turned 1/2 into 2/4 and added 1/4.", "self_confidence": "sure"}
+{"question_id": 1, "answer": "3/4", "explanation": "I turned 1/2 into 2/4 and added 1/4.", "self_confidence": "sure",
+ "time_spent_seconds": 34, "timed_out": false, "ran_out_of_time": false}
 ```
-answer 1–100 chars; explanation 0–2000 chars.
+answer 1–100 chars; explanation 0–2000 chars. Timing fields are optional: `time_spent_seconds` (0–7200) = seconds from showing the question to submitting; `timed_out` = the question's timer hit zero and the app auto-submitted whatever was typed (ignored when the question has no timer); `ran_out_of_time` = the student ticked "I ran out of time". The "Ran out of time" story is only ever based on these two flags, never guessed by the AI.
 `201` →
 ```json
 {"response_id": 31, "follow_up": null}
@@ -149,7 +153,7 @@ Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` alr
   "questions": [
     {
       "question_id": 1, "position": 1, "prompt": "What is 1/2 + 1/4?", "correct_answer": "3/4",
-      "total_responses": 10, "same_score_different_reasons": true,
+      "total_responses": 10, "same_score_different_reasons": true, "same_wrong_answer_different_stories": true,
       "groups": [
         {"is_correct": true, "count": 6, "labels": [
           {"label": "understood", "count": 4, "students": [
@@ -159,12 +163,20 @@ Body `{"reply": "..."}` (1–1000 chars) → `200 {"status": "done"}`. `409` alr
           {"label": "guessed", "count": 2, "students": []}
         ]},
         {"is_correct": false, "count": 4, "labels": []}
+      ],
+      "wrong_answers": [
+        {"answer": "1/5", "count": 3, "several_stories": true,
+         "stories": [{"label": "misread", "misconception_label": null, "count": 1},
+                     {"label": "misconception", "misconception_label": "Bigger denominator means bigger fraction", "count": 1},
+                     {"label": "out_of_time", "misconception_label": null, "count": 1}],
+         "students": [ "...StudentEntry objects as above..." ]}
       ]
     }
   ]
 }
 ```
-Groups: correct first, then incorrect; empty groups omitted. `rule_only_count > 0` → show banner "Some answers were checked by rules only (AI unavailable)".
+Groups: correct first, then incorrect; empty groups omitted.
+`wrong_answers`: every wrong answer, grouped by value (`0.2` and `1/5` are the same answer), biggest group first, with the stories behind it. `several_stories` is true when one wrong answer has two or more *decided* stories — this is the Riddle 2 view: "3 students answered 1/5 — for 3 different reasons". `rule_only_count > 0` → show banner "Some answers were checked by rules only (AI unavailable)".
 
 ### `GET /api/responses/{response_id}` · teacher
 `200` → **ResponseDetail**:
@@ -173,6 +185,7 @@ Groups: correct first, then incorrect; empty groups omitted. `rule_only_count > 
   "response_id": 31, "student_id": 9, "nickname": "Asha",
   "question": { "...": "Quiz question object, as in PUT quiz response" },
   "answer": "3/4", "explanation": "...", "self_confidence": "sure", "is_correct": true,
+  "time_spent_seconds": 34, "timed_out": false, "ran_out_of_time": false,
   "created_at": "...",
   "diagnosis": {
     "diagnosis_id": 40, "version": 2, "label": "understood", "misconception_id": null,
@@ -180,7 +193,10 @@ Groups: correct first, then incorrect; empty groups omitted. `rule_only_count > 
     "created_at": "...",
     "hypotheses": [
       {"kind": "understood", "misconception_id": null, "misconception_label": null,
-       "evidence_for": "I turned 1/2 into 2/4", "evidence_against": "", "likelihood": 0.86, "status": "supported"}
+       "evidence_for": "I turned 1/2 into 2/4", "evidence_against": "", "likelihood": 0.86, "status": "supported",
+       "would_confirm": "They explain a new pair, e.g. 1/3 + 1/6, the same way"},
+      {"kind": "guessed", "misconception_id": null, "misconception_label": null, "evidence_for": "",
+       "evidence_against": "Explains each step", "likelihood": 0.0, "status": "ruled_out", "would_confirm": ""}
     ]
   },
   "history": [{"version": 1, "label": "not_sure", "source": "both", "certainty": 0.55, "status": "open", "created_at": "..."}],
@@ -189,6 +205,7 @@ Groups: correct first, then incorrect; empty groups omitted. `rule_only_count > 
 }
 ```
 `follow_up` may be `null`. `history` lists older versions (newest first), excluding the current one.
+Hypotheses = every story weighed: `supported` (chosen), `open` (still possible — show its `would_confirm`), `ruled_out` (rejected — show `evidence_against` as the reason). Show all of them, not just the label: "Stories considered".
 
 ### `POST /api/responses/{response_id}/override` · teacher
 Body `{"label": "misread", "misconception_id": null, "note": "Talked to her — she read 1/4 as 4."}`

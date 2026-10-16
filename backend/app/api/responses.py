@@ -28,5 +28,5 @@ def get_response(response: TeacherResponse) -> ResponseDetail:
 @router.post("/{response_id}/override")
 def override(body: OverrideIn, response: TeacherResponse, db: DbSession) -> ResponseDetail:
     override_diagnosis(db, response, body)
-    db.commit()
+    db.expire(response)  # reload every version, including any written concurrently
     return response_detail(response)

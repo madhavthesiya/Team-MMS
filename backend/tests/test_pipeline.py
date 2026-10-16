@@ -1,7 +1,7 @@
 from app.ai.client import AIUnavailable
 from app.domain import MisconceptionSpec, QuestionSpec, StudentWork
 from app.services.pipeline import run_diagnosis
-from tests.fakes import FakeAIClient, FakeClock, analysis, follow_up, hyp
+from tests.fakes import WEIGHED, FakeAIClient, FakeClock, analysis, follow_up, hyp, out
 
 Q = QuestionSpec(
     prompt="What is 1/2 + 1/4?",
@@ -35,9 +35,9 @@ def test_rules_and_ai_agree_settles_as_both():
 def test_ai_fills_in_when_rules_have_no_opinion():
     work = StudentWork(answer="1/4", explanation="I thought it asked for 1/2 of 1/2", self_confidence="sure")
     ai = FakeAIClient()
-    ai.push(analysis("misread", 0.85, hyp("misread", "asked for 1/2 of 1/2", 0.85)))
-    out = run(work, ai)
-    assert (out.label, out.source, out.status) == ("misread", "ai", "settled")
+    ai.push(analysis("misread", 0.85, hyp("misread", "asked for 1/2 of 1/2", 0.85), ruled_out=WEIGHED))
+    result = run(work, ai)
+    assert (result.label, result.source, result.status) == ("misread", "ai", "settled")
 
 
 def test_same_correct_answer_without_reasoning_triggers_a_targeted_follow_up():
@@ -133,11 +133,13 @@ def test_reply_quoting_the_misread_settles_it_and_rules_out_the_rule():
     work = StudentWork(**MISREAD, follow_up_question="Which one did the question ask for?",
                        follow_up_reply="Oh I read it as which is smaller. 1/3 is bigger.")
     ai = FakeAIClient()
-    ai.push(analysis("misread", 0.9, hyp("misread", "I read it as which is smaller", 0.9)))
-    out = run_diagnosis(BIGGER, work, ai, threshold=0.7, allow_follow_up=False)
-    assert (out.label, out.status, out.source) == ("misread", "settled", "ai")
-    assert {(h.kind, h.status) for h in out.hypotheses} == {("misread", "supported"), ("misconception", "ruled_out")}
-    assert "follow-up reply supports" in out.trace[-1].detail
+    ai.push(analysis("misread", 0.9, hyp("misread", "I read it as which is smaller", 0.9),
+                     ruled_out=(out("slip", "no calculation involved"),)))
+    result = run_diagnosis(BIGGER, work, ai, threshold=0.7, allow_follow_up=False)
+    assert (result.label, result.status, result.source) == ("misread", "settled", "ai")
+    assert {(h.kind, h.status) for h in result.hypotheses} == {
+        ("misread", "supported"), ("misconception", "ruled_out"), ("slip", "ruled_out")}
+    assert "follow-up reply supports" in result.trace[-1].detail
 
 
 def test_reply_does_not_settle_when_evidence_comes_only_from_the_first_explanation():

@@ -20,6 +20,7 @@ def spec_from_question(question: Question) -> QuestionSpec:
             )
             for m in question.misconceptions
         ),
+        time_limit_seconds=question.time_limit_seconds,
     )
 
 
@@ -42,4 +43,5 @@ def spec_from_input(question: QuestionIn, misconception_ids: list[int]) -> Quest
             )
             for mid, m in zip(misconception_ids, question.misconceptions)
         ),
+        time_limit_seconds=question.time_limit_seconds,
     )

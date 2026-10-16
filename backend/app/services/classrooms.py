@@ -44,6 +44,7 @@ def replace_quiz(db: Session, cls: ClassRoom, body: QuizIn) -> Quiz:
             answer_type=q.answer_type,
             key_idea=q.key_idea,
             choices=list(q.choices),
+            time_limit_seconds=q.time_limit_seconds,
         )
         question.misconceptions = [
             Misconception(
@@ -79,6 +80,7 @@ def question_out(q: Question) -> QuestionOut:
             )
             for m in q.misconceptions
         ],
+        time_limit_seconds=q.time_limit_seconds,
     )
 
 

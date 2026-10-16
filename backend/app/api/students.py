@@ -25,6 +25,5 @@ def me(student: CurrentStudent) -> StudentOut:
 def reply(
     follow_up_id: int, body: ReplyIn, student: CurrentStudent, db: DbSession, ai: AIDep, settings: AppSettings
 ) -> ReplyOut:
-    reply_to_follow_up(db, student, follow_up_id, body.reply, ai, settings)
-    db.commit()
+    reply_to_follow_up(db, student, follow_up_id, body.reply, ai, settings)  # commits its own writes
     return ReplyOut()

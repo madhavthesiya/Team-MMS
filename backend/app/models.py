@@ -57,6 +57,7 @@ class Question(Base):
     answer_type: Mapped[str] = mapped_column(String(10))
     key_idea: Mapped[str] = mapped_column(Text)
     choices: Mapped[list[str]] = mapped_column(JSON, default=list)
+    time_limit_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     quiz: Mapped[Quiz] = relationship(back_populates="questions")
     misconceptions: Mapped[list["Misconception"]] = relationship(
@@ -105,6 +106,9 @@ class Response(Base):
     explanation_raw: Mapped[str] = mapped_column(Text)
     self_confidence: Mapped[str] = mapped_column(String(10))
     is_correct: Mapped[bool] = mapped_column(Boolean)
+    time_spent_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    timed_out: Mapped[bool] = mapped_column(Boolean, default=False)
+    reported_out_of_time: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     student: Mapped[Student] = relationship(back_populates="responses")
@@ -122,6 +126,8 @@ class Diagnosis(Base):
     """What we think the evidence means. A hypothesis, versioned, never a verdict."""
 
     __tablename__ = "diagnoses"
+    # Two writers (teacher override, AI re-read) can't both claim the same version.
+    __table_args__ = (UniqueConstraint("response_id", "version"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     response_id: Mapped[int] = mapped_column(ForeignKey("responses.id", ondelete="CASCADE"))
@@ -159,6 +165,7 @@ class Hypothesis(Base):
     evidence_against: Mapped[str] = mapped_column(Text, default="")
     likelihood: Mapped[float] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(12), default="open")
+    would_confirm: Mapped[str] = mapped_column(Text, default="")
 
     diagnosis: Mapped[Diagnosis] = relationship(back_populates="hypotheses")
 

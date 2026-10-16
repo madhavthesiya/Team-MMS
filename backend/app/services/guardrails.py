@@ -5,9 +5,10 @@ from dataclasses import dataclass
 from app.ai.schemas import AIAnalysis
 from app.domain import HypothesisOut, Label, QuestionSpec, StudentWork
 from app.services.normalizer import normalize_text, parse_number
+from app.services.rule_matcher import timing_evidence
 
 _CORRECT_ONLY = {"understood"}
-_INCORRECT_ONLY = {"misread", "misconception", "slip"}
+_INCORRECT_ONLY = {"misread", "misconception", "slip", "out_of_time"}
 _QUOTE_EDGE = "\"'“”‘’ .,"
 _INJECTION = re.compile(
     r"ignore (all |any )?(of )?(the |your )?(previous|prior|above|earlier) (instructions|rules|prompts?)"
@@ -27,6 +28,7 @@ class GuardedAnalysis:
     misconception_id: int | None
     hypotheses: tuple[HypothesisOut, ...]
     notes: tuple[str, ...]
+    ruled_out: tuple[HypothesisOut, ...] = ()  # stories weighed and rejected, with the reason
 
 
 def _norm(text: str) -> str:
@@ -59,32 +61,57 @@ def apply_guardrails(
 ) -> GuardedAnalysis:
     valid_ids = {m.id for m in question.misconceptions}
     student_text = "\n".join([work.answer, work.explanation, work.follow_up_reply or ""])
+    timing = timing_evidence(question, work)
     notes: list[str] = []
     kept: list[HypothesisOut] = []
 
+    def impossible(kind: str) -> bool:
+        return (kind in _CORRECT_ONLY and not is_correct) or (kind in _INCORRECT_ONLY and is_correct)
+
     for h in analysis.hypotheses:
-        if (h.kind in _CORRECT_ONLY and not is_correct) or (h.kind in _INCORRECT_ONLY and is_correct):
+        if impossible(h.kind):
             notes.append(f"dropped '{h.kind}': impossible for a {'correct' if is_correct else 'wrong'} answer")
             continue
         misconception_id = h.misconception_id if h.kind == "misconception" else None
         if h.kind == "misconception" and misconception_id not in valid_ids:
             notes.append("dropped 'misconception': not one of the teacher's misconceptions")
             continue
-        quote_found = quote_in(h.evidence_quote, student_text)
-        self_reported_guess = h.kind == "guessed" and work.self_confidence == "guessed"
-        if not quote_found and not self_reported_guess:
+        if h.kind == "out_of_time":
+            if timing is None:
+                notes.append("dropped 'out_of_time': no timer or student report says they ran out of time")
+                continue
+            evidence = timing
+        elif quote_in(h.evidence_quote, student_text):
+            evidence = h.evidence_quote.strip()
+        elif h.kind == "guessed" and work.self_confidence == "guessed":
+            evidence = "Student said they guessed"
+        else:
             notes.append(f"dropped '{h.kind}': quoted evidence not found in the student's words")
             continue
         kept.append(
             HypothesisOut(
                 kind=h.kind,
                 misconception_id=misconception_id,
-                evidence_for=h.evidence_quote.strip() if quote_found else "Student said they guessed",
+                evidence_for=evidence,
                 evidence_against=h.evidence_against.strip(),
                 likelihood=h.likelihood,
+                would_confirm=h.would_confirm.strip(),
             )
         )
     kept.sort(key=lambda h: h.likelihood, reverse=True)
+
+    kept_keys = {(h.kind, h.misconception_id) for h in kept}
+    ruled_out: list[HypothesisOut] = []
+    for r in analysis.alternatives_ruled_out:
+        misconception_id = r.misconception_id if r.kind == "misconception" and r.misconception_id in valid_ids else None
+        key = (r.kind, misconception_id)
+        if impossible(r.kind) or key in kept_keys or (r.kind == "misconception" and misconception_id is None):
+            continue
+        kept_keys.add(key)
+        ruled_out.append(
+            HypothesisOut(kind=r.kind, misconception_id=misconception_id, evidence_for="",
+                          evidence_against=r.reason.strip(), likelihood=0.0, status="ruled_out")
+        )
 
     label: Label = analysis.label
     misconception_id = analysis.misconception_id if label == "misconception" else None
@@ -97,4 +124,4 @@ def apply_guardrails(
         if not backed:
             notes.append(f"label '{label}' had no surviving evidence, so not sure")
             label, misconception_id = "not_sure", None
-    return GuardedAnalysis(label, analysis.certainty, misconception_id, tuple(kept), tuple(notes))
+    return GuardedAnalysis(label, analysis.certainty, misconception_id, tuple(kept), tuple(notes), tuple(ruled_out))

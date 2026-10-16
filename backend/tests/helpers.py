@@ -10,6 +10,7 @@ QUIZ = {
             "answer_type": "number",
             "key_idea": "Use a common denominator: 1/2 = 2/4.",
             "misconceptions": [{"label": "Adds tops and bottoms", "trigger_answers": ["2/6"]}],
+            "time_limit_seconds": 60,
         },
         {
             "prompt": "Is 2/4 equal to 1/2?",
@@ -50,9 +51,21 @@ def join(client: TestClient, join_code: str, nickname: str = "Asha") -> dict:
 
 
 def submit(client: TestClient, student_token: str, question_id: int, answer: str, explanation: str,
-           confidence: str = "sure"):
+           confidence: str = "sure", **timing):
     return client.post(
         "/api/responses",
         headers=student(student_token),
-        json={"question_id": question_id, "answer": answer, "explanation": explanation, "self_confidence": confidence},
+        json={"question_id": question_id, "answer": answer, "explanation": explanation,
+              "self_confidence": confidence, **timing},
     )
+
+
+def follow_up_flow(client: TestClient, fake_ai) -> tuple[dict, dict, object]:
+    """A student whose correct-but-unexplained answer triggers a follow-up. Returns (class, student, response)."""
+    from tests.fakes import analysis, follow_up, hyp
+
+    cls = create_class_with_quiz(client)
+    s = join(client, cls["join_code"])
+    fake_ai.push(analysis("guessed", 0.8, hyp("guessed", "it looked right", 0.8)), follow_up("How would you add 1/3 and 1/6?"))
+    r = submit(client, s["student_token"], s["quiz"]["questions"][0]["question_id"], "3/4", "it looked right")
+    return cls, s, r

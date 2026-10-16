@@ -112,7 +112,7 @@ Delete `src/App.css` and `src/assets/` if unused. Set `<title>BehindTheMark</tit
 ```ts
 export type AnswerType = "number" | "text" | "choice";
 export type Confidence = "sure" | "unsure" | "guessed";
-export type Label = "understood" | "misread" | "misconception" | "guessed" | "slip" | "not_sure";
+export type Label = "understood" | "misread" | "misconception" | "guessed" | "slip" | "out_of_time" | "not_sure";
 export type HypothesisKind = Exclude<Label, "not_sure">;
 export type Source = "rule" | "ai" | "both" | "teacher";
 export type Status = "open" | "settled" | "not_sure";
@@ -123,7 +123,7 @@ export interface ClassCreated { class_id: number; name: string; join_code: strin
 export interface MisconceptionIn { label: string; trigger_answers: string[]; signal_text: string; remedy_hint: string }
 export interface QuestionIn {
   prompt: string; correct_answer: string; answer_type: AnswerType; key_idea: string;
-  choices: string[]; misconceptions: MisconceptionIn[];
+  choices: string[]; misconceptions: MisconceptionIn[]; time_limit_seconds: number | null;
 }
 export interface QuizIn { topic: string; title: string; questions: QuestionIn[] }
 
@@ -136,7 +136,10 @@ export interface ClassInfo {
   class_id: number; name: string; join_code: string; is_sample: boolean; created_at: string; quiz: Quiz | null;
 }
 
-export interface StudentQuestion { question_id: number; position: number; prompt: string; answer_type: AnswerType; choices: string[] }
+export interface StudentQuestion {
+  question_id: number; position: number; prompt: string; answer_type: AnswerType; choices: string[];
+  time_limit_seconds: number | null;
+}
 export interface StudentQuiz { topic: string; title: string; questions: StudentQuestion[] }
 export interface PendingFollowUp { follow_up_id: number; question_id: number; question_text: string }
 export interface StudentInfo {
@@ -145,7 +148,10 @@ export interface StudentInfo {
 }
 export interface JoinResult extends StudentInfo { student_token: string }
 
-export interface ResponseIn { question_id: number; answer: string; explanation: string; self_confidence: Confidence }
+export interface ResponseIn {
+  question_id: number; answer: string; explanation: string; self_confidence: Confidence;
+  time_spent_seconds: number; timed_out: boolean; ran_out_of_time: boolean;
+}
 export interface FollowUp { follow_up_id: number; question_text: string }
 export interface SubmitResult { response_id: number; follow_up: FollowUp | null }
 
@@ -155,15 +161,20 @@ export interface StudentEntry {
 }
 export interface LabelGroup { label: Label; count: number; students: StudentEntry[] }
 export interface CorrectnessGroup { is_correct: boolean; count: number; labels: LabelGroup[] }
+export interface StoryCount { label: Label; misconception_label: string | null; count: number }
+export interface WrongAnswerGroup {
+  answer: string; count: number; several_stories: boolean; stories: StoryCount[]; students: StudentEntry[];
+}
 export interface QuestionResults {
   question_id: number; position: number; prompt: string; correct_answer: string;
-  total_responses: number; same_score_different_reasons: boolean; groups: CorrectnessGroup[];
+  total_responses: number; same_score_different_reasons: boolean; same_wrong_answer_different_stories: boolean;
+  groups: CorrectnessGroup[]; wrong_answers: WrongAnswerGroup[];
 }
 export interface Results { class_id: number; total_students: number; rule_only_count: number; questions: QuestionResults[] }
 
 export interface Hypothesis {
   kind: HypothesisKind; misconception_id: number | null; misconception_label: string | null;
-  evidence_for: string; evidence_against: string; likelihood: number; status: HypStatus;
+  evidence_for: string; evidence_against: string; likelihood: number; status: HypStatus; would_confirm: string;
 }
 export interface DiagnosisView {
   diagnosis_id: number; version: number; label: Label; misconception_id: number | null;
@@ -179,6 +190,7 @@ export interface TraceStep {
 export interface ResponseDetail {
   response_id: number; student_id: number; nickname: string; question: Question;
   answer: string; explanation: string; self_confidence: Confidence; is_correct: boolean; created_at: string;
+  time_spent_seconds: number | null; timed_out: boolean; ran_out_of_time: boolean;
   diagnosis: DiagnosisView; history: HistoryEntry[]; follow_up: FollowUpView | null; trace: TraceStep[];
 }
 export interface OverrideIn { label: Label; misconception_id: number | null; note: string }
@@ -260,11 +272,12 @@ import type { Label, Source } from "../api/types";
 export function labelText(label: Label, misconceptionLabel?: string | null): string {
   switch (label) {
     case "understood": return "Understood";
-    case "misread": return "Misread the question";
-    case "misconception": return misconceptionLabel ? `Misconception: ${misconceptionLabel}` : "Misconception";
+    case "misread": return "Missed a condition in the question";
+    case "misconception": return misconceptionLabel ? `Mistaken rule: ${misconceptionLabel}` : "Mistaken rule";
     case "guessed": return "Likely guessed";
     case "slip": return "Careless slip";
-    case "not_sure": return "Not sure yet";
+    case "out_of_time": return "Ran out of time";
+    case "not_sure": return "Several stories — not chosen yet";
   }
 }
 
@@ -274,6 +287,7 @@ export const labelColor: Record<Label, string> = {
   misconception: "bg-amber-100 text-amber-900",
   guessed: "bg-violet-100 text-violet-800",
   slip: "bg-slate-200 text-slate-800",
+  out_of_time: "bg-orange-100 text-orange-900",
   not_sure: "bg-rose-100 text-rose-800",
 };
 
@@ -487,7 +501,7 @@ Accept: loading/error/empty all reachable; 403 shows "This teacher link doesn't 
 **Files:** `QuizBuilder.tsx`
 
 - Loads class; if quiz exists, pre-fill the form from it (strip ids).
-- Fields: topic, title; list of questions (add / remove / move up). Per question: prompt (textarea), answer type (select number/text/choice), correct answer, key idea (textarea, helper text "What would a student who really understands say?"), choices (only when type = choice; add/remove; correct answer picked from choices via radio), misconceptions list (add/remove) with label, trigger answers (comma-separated input → array, trimmed, empty removed), signal text, remedy hint.
+- Fields: topic, title; list of questions (add / remove / move up). Per question: prompt (textarea), answer type (select number/text/choice), optional time limit in seconds (empty = no timer; 10–3600), correct answer, key idea (textarea, helper text "What would a student who really understands say?"), choices (only when type = choice; add/remove; correct answer picked from choices via radio), misconceptions list (add/remove) with label, trigger answers (comma-separated input → array, trimmed, empty removed), signal text, remedy hint.
 - Client-side checks mirror the contract limits (required fields, ≤20 questions, ≤6 misconceptions, choice needs ≥2 choices). Server 422 → show the message from ApiError at the top; 409 → "Students have already answered — this quiz is locked."
 - Save → `api.saveQuiz` → navigate back to class home.
 - Helper copy at top: "Misconceptions are optional. Add the wrong answers you expect and what they usually mean — the system checks every explanation either way."
@@ -501,7 +515,8 @@ Accept: can create a 3-question quiz on a phone without horizontal scroll. Commi
 - **Join:** code input (pre-filled from `?code=`; uppercase), nickname input (1–30, helper "Use a nickname — not your full name"). Submit → `api.join` → `storage.setStudentToken(token)` → `/student`. 404 → "No class with that code."
 - **Quiz:** load `api.me(token)` (no token → redirect `/join`). `quiz === null` → EmptyState "Your teacher hasn't added questions yet." Show first question not in `answered_question_ids`; progress "Question 3 of 10".
   - Consent notice above the first question (once): "Your explanation is checked by an AI to help your teacher understand your thinking. Don't include personal details."
-  - Inputs: answer (number/text → text input; choice → radio buttons), explanation textarea ("How did you get this? Explain in your own words."), confidence segmented control (Sure / Not sure / I guessed → `sure|unsure|guessed`). Submit disabled until answer + confidence set.
+  - Inputs: answer (number/text → text input; choice → radio buttons), explanation textarea ("How did you get this? Explain in your own words."), confidence segmented control (Sure / Not sure / I guessed → `sure|unsure|guessed`), and a tick box "I ran out of time" (`ran_out_of_time`). Submit disabled until answer + confidence set.
+  - Timing (Riddle 2): start a clock when the question appears; send `time_spent_seconds` (whole seconds) on submit. If the question has `time_limit_seconds`, show a visible countdown; at zero, auto-submit whatever is typed with `timed_out: true` (blank answer → send "-" to meet the 1-char minimum; confidence defaults to `unsure`). Never auto-submit on questions without a timer.
   - Submit → Spinner "Reading your reasoning…" (can take up to 10 s) → if `follow_up` → show it as "One quick question" with a reply textarea → `api.reply` → next question; else next question.
   - **Pending follow-ups first:** on load, if `pending_follow_ups` is non-empty, show the first one ("One quick question about Q{n}") with a reply box before any new question. A refresh mid-follow-up must land back on it.
   - 409 on submit or a network error/timeout after submitting → re-fetch `api.me` and continue from its state (it may now have a pending follow-up). Network error before the request reached the server → ErrorBox with retry keeping the typed text.
@@ -515,12 +530,14 @@ Accept: whole flow works on a phone. Commit `feat(frontend): student flow`.
 **Files:** `teacher/Results.tsx`, `teacher/ResponseDetail.tsx`
 
 - **Results:** load `api.getResults`; Refresh button. If `rule_only_count > 0` → Banner warn "Some answers were checked by rules only — the AI was unavailable." Empty when every question has `total_responses === 0`: "No responses yet — share code {join_code}".
-  - Per question card: "Q{position}. {prompt}", correct answer, "{total} responses". If `same_score_different_reasons` → highlight chip "Same score, different reasons".
+  - Per question card: "Q{position}. {prompt}", correct answer, "{total} responses". If `same_score_different_reasons` → highlight chip "Same score, different reasons". If `same_wrong_answer_different_stories` → chip "Same mistake, different stories".
+  - **Same wrong answer section (Riddle 2):** for each `wrong_answers` group: "{count} students answered **{answer}**", then one pill per story with its count (e.g. "Mistaken rule: bigger denominator ×1 · Missed a condition ×1 · Ran out of time ×1"), then nicknames linking to response detail. Put this section above the right/wrong breakdown when `several_stories` is true.
   - Inside: two sections "Got it right ({count})" and "Got it wrong ({count})"; within each, one row per label group: label pill (`labelText`, `labelColor`) + count + nicknames as links to `/teacher/{id}/responses/{response_id}`. Status `open` shows "(waiting for follow-up)".
 - **ResponseDetail:** load `api.getResponse`.
   - Evidence block (unchanged student work): question prompt, correct answer, student answer (✓/✗), explanation (quoted), confidence.
   - Current reading: label pill, certainty as %, source (`sourceText`), status; note if teacher override.
-  - "Possible reasons" list: each hypothesis — kind label, likelihood %, evidence quote (blockquote), evidence against, status (supported/open/ruled out).
+  - "Stories considered" list (Riddle 2: a mistake is a clue, not a verdict) — show every hypothesis, grouped: **Chosen** (`supported`), **Still possible** (`open`), **Ruled out** (`ruled_out`). Each shows: story label, likelihood %, evidence (blockquote), evidence against (for ruled-out stories this is the reason), and "What would confirm it: {would_confirm}" when present.
+  - Timing line in the evidence block: "Answered in {time_spent_seconds} s", plus "Timer ran out" / "Said they ran out of time" badges when set.
   - Follow-up block if present: question + reply (or "Waiting for the student's reply").
   - "Why this label?" collapsible: trace table (step, source, ok ✓/✗, latency ms, detail).
   - History list (older versions).
