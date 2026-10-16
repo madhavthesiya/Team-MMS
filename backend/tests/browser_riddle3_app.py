@@ -10,7 +10,7 @@ from app.main import create_app
 from tests.fakes import FakeAIClient, analysis, follow_up, hyp
 
 app = create_app(Settings(
-    _env_file=None, gemini_api_key="", database_url="sqlite://",
+    _env_file=None, gemini_api_key="", gemini_api_keys="", groq_api_key="", groq_api_keys="", database_url="sqlite://",
     frontend_dist=str(Path(__file__).resolve().parents[2] / "frontend" / "dist"),
     rate_limit_public="1000/minute", rate_limit_student="1000/minute",
 ))

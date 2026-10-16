@@ -160,24 +160,24 @@ const DEFAULT_ITEMS: CardNavItem[] = [
     label: 'Diagnostics',
     description: 'Diagnose deeper student misconceptions.',
     links: [
-      { label: 'Sample Class (Riddle 1)', href: '/teacher/1' },
-      { label: 'Create New Class', href: '/teacher/new' }
+      { label: 'Create New Class', href: '/teacher/new' },
+      { label: 'Join Class', href: '/join' }
     ]
   },
   {
     label: 'Student Portal',
     description: 'Explain math reasoning with AI guardrails.',
     links: [
-      { label: 'Join with Code', href: '/join' },
-      { label: 'Sample Quiz', href: '/join?code=KMJ6WL' }
+      { label: 'Enter Join Code', href: '/join' },
+      { label: 'How It Works', href: '/' }
     ]
   },
   {
     label: 'Methodology',
     description: 'Same score, completely different cognitive story.',
     links: [
-      { label: 'The Same Number', href: '/#concept' },
-      { label: 'Teacher AI Tools', href: '/teacher/new' }
+      { label: 'Riddle 1: The Same Number', href: '/' },
+      { label: 'Riddle 2: Several Stories', href: '/' }
     ]
   }
 ];

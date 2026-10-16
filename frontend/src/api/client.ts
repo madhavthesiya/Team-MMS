@@ -1,4 +1,8 @@
 import type {
+  AIGenerateQuestionIn,
+  AIGenerateQuestionOut,
+  AIInterventionOut,
+  AISummaryOut,
   ClassCreated,
   ClassInfo,
   DeclineReason,
@@ -81,6 +85,8 @@ async function request<T>(
 }
 
 export const api = {
+  checkHealth: () =>
+    request<{ status: string; db: string; ai_configured: boolean }>("GET", "/health"),
   createClass: (name: string) => request<ClassCreated>("POST", "/classes", { name }),
   createSampleClass: () => request<ClassCreated>("POST", "/classes/sample"),
   getClass: (id: number, token: string) =>
@@ -120,5 +126,29 @@ export const api = {
   declineFollowUp: (token: string, followUpId: number, reason: DeclineReason) =>
     request<{ status: "done" }>(
       "POST", `/follow-ups/${followUpId}/decline`, { reason }, { student: token }
+    ),
+  aiGenerateQuestion: (classId: number, token: string, body: AIGenerateQuestionIn) =>
+    request<AIGenerateQuestionOut>(
+      "POST",
+      `/classes/${classId}/ai-generate-question`,
+      body,
+      { teacher: token },
+      35000
+    ),
+  aiIntervention: (responseId: number, token: string) =>
+    request<AIInterventionOut>(
+      "POST",
+      `/responses/${responseId}/ai-intervention`,
+      undefined,
+      { teacher: token },
+      35000
+    ),
+  aiClassSummary: (classId: number, token: string) =>
+    request<AISummaryOut>(
+      "POST",
+      `/classes/${classId}/ai-summary`,
+      undefined,
+      { teacher: token },
+      40000
     ),
 };

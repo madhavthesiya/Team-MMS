@@ -4,15 +4,15 @@ import { Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SwarmCursor from "./SwarmCursor";
 import CardNav, { type CardNavItem } from "./CardNav";
+import { api } from "../api/client";
 
 const navItems: CardNavItem[] = [
   {
     label: "Diagnostics",
     description: "Analyze student reasoning beyond multiple-choice scores.",
     links: [
-      { label: "Sample Class (Grade 7)", href: "/teacher/1" },
       { label: "Create New Class", href: "/teacher/new" },
-      { label: "Diagnostic Analytics", href: "/teacher/1/results" },
+      { label: "Join Student Session", href: "/join" },
     ],
   },
   {
@@ -20,15 +20,15 @@ const navItems: CardNavItem[] = [
     description: "Submit answers with self-explanations & confidence.",
     links: [
       { label: "Enter Join Code", href: "/join" },
-      { label: "Try Demo Quiz (Riddle 1)", href: "/join?code=KMJ6WL" },
+      { label: "Home Overview", href: "/" },
     ],
   },
   {
     label: "Methodology",
     description: "Same score, completely different cognitive story.",
     links: [
-      { label: "Riddle 1: Same Number", href: "/" },
-      { label: "Asha vs. Leo Case Study", href: "/" },
+      { label: "Riddle 1: The Same Number", href: "/" },
+      { label: "Riddle 2: Several Stories", href: "/" },
     ],
   },
 ];
@@ -38,8 +38,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [healthy, setHealthy] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/health")
-      .then((r) => (r.ok ? r.json() : null))
+    api
+      .checkHealth()
       .then((d) => setHealthy(d?.status === "ok"))
       .catch(() => setHealthy(false));
   }, []);

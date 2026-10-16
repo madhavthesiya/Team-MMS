@@ -33,13 +33,6 @@ export default function Join() {
     }
   }, [searchParams]);
 
-  function handleDemoJoin() {
-    setCode("KMJ6WL");
-    if (!nickname) {
-      setNickname("Asha");
-    }
-  }
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const cleanCode = code.toUpperCase().trim();
@@ -118,16 +111,6 @@ export default function Join() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleDemoJoin}
-                className="text-xs font-mono px-3 py-1.5 rounded-xl border border-white/20 bg-zinc-900/90 text-zinc-300 hover:text-white hover:border-white transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-                <span>Try Demo (KMJ6WL)</span>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -164,12 +147,12 @@ export default function Join() {
                     maxLength={6}
                     value={code}
                     onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                    placeholder="e.g. KMJ6WL"
+                    placeholder="ABC123"
                     className="w-full rounded-xl border border-white/20 bg-zinc-950 px-4 py-3 font-mono text-center text-2xl font-black tracking-widest text-white placeholder-zinc-700 outline-none focus:border-white focus:ring-1 focus:ring-white/20 uppercase transition-colors"
                     disabled={loading}
                   />
                   <span className="text-[11px] text-zinc-500 mt-1 block">
-                    Codes are 6 letters (e.g. KMJ6WL). Ask your teacher if you don't have one.
+                    Codes are 6 letters. Ask your teacher for the code, or try the sample class on the home page.
                   </span>
                 </div>
 

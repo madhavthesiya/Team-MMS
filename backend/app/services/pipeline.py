@@ -324,8 +324,8 @@ def run_diagnosis(
                                 None, _reconcile((*hypotheses, *guarded.ruled_out)), None, (), True, tuple(trace))
 
     if confident and not agrees and rule_h is not None:  # rule vs AI: ask what separates the two views
-        ai_h = next(h for h in hypotheses if _backs_label(h, guarded) and h is not rule_h)
-        top_two = (ai_h, rule_h)
+        ai_h = next((h for h in hypotheses if _backs_label(h, guarded) and h is not rule_h), None)
+        top_two = (ai_h, rule_h) if ai_h is not None else hypotheses[:2]
     else:
         top_two = hypotheses[:2]
     plan = _follow_up(question, work, rule, top_two, ai, trace, budget)

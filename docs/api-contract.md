@@ -238,3 +238,76 @@ Hypotheses = every story weighed: `supported` (chosen), `open` (still possible �
 Body `{"label": "misread", "misconception_id": null, "note": "Talked to her — she read 1/4 as 4."}`
 `misconception_id` required when label is `misconception` (must belong to the question). note ≤500.
 `200` → updated **ResponseDetail** (new version, `source: "teacher"`, old version moves to history). Teacher readings are final: later student replies never replace them.
+
+### `POST /api/responses/{response_id}/ai-intervention` · teacher
+Generates a 1-on-1 pedagogical desk intervention and conversational dialogue script based on the student's diagnosed cognitive story.
+`200` → **AIInterventionOut**:
+```json
+{
+  "student_nickname": "Asha",
+  "diagnosed_label": "misconception",
+  "misconception_name": "Adds across tops and bottoms",
+  "misconception_breakdown": "The student treats numerators and denominators as independent whole numbers...",
+  "one_on_one_script": [
+    {"teacher_prompt": "If you have half a pizza and add a quarter, can the answer be smaller than half?", "anticipated_student_thinking": "Realizes the contradiction in 2/6 being smaller than 1/2."}
+  ],
+  "concrete_counterexample": "Show visual pizza quarters: 1/2 is already 2/4, so adding 1/4 gives 3/4.",
+  "check_for_understanding_question": "Can you draw 1/3 + 1/6 using a common strip?",
+  "generated_by_model": "gemini-3.5-flash-lite"
+}
+```
+
+### `POST /api/classes/{class_id}/ai-generate-question` · teacher
+Generates a diagnostic assessment question with cognitive distractors and researched misconceptions.
+Body: `{"topic": "Ohm's Law", "grade_level": "High School", "misconception_focus": "Current gets used up"}`
+`200` → **AIGenerateQuestionOut**:
+```json
+{
+  "prompt": "In a series circuit with two identical bulbs, how does bulb A compare to bulb B?",
+  "correct_answer": "Both bulbs are equally bright",
+  "answer_type": "choice",
+  "key_idea": "Current is conserved around a single loop and does not diminish.",
+  "choices": ["Bulb A is brighter", "Both bulbs are equally bright", "Bulb B is brighter"],
+  "misconceptions": [
+    {
+      "label": "Current wear-out model",
+      "trigger_answers": ["Bulb A is brighter"],
+      "signal_text": "first bulb takes the power",
+      "remedy_hint": "Use water pipe analogy where fluid flow is constant everywhere in a closed pipe."
+    }
+  ],
+  "time_limit_seconds": 90
+}
+```
+
+### `POST /api/classes/{class_id}/ai-summary` · teacher
+Synthesizes whole-classroom cognitive trends, dominant roadblocks, and provides a 10-minute reteach plan.
+`200` → **AISummaryOut**:
+```json
+{
+  "class_name": "7B Maths",
+  "quiz_topic": "Fractions",
+  "total_students": 24,
+  "correct_count": 14,
+  "accuracy_percentage": 58.3,
+  "executive_summary": "Class 7B demonstrates that raw accuracy (58.3%) obscures two distinct cognitive groups...",
+  "dominant_misconception": "Independent addition of numerators and denominators",
+  "undercover_guessers_warning": "3 students correctly selected 3/4 without being able to explain common denominators.",
+  "ten_minute_reteach_plan": [
+    "Step 1: Visual hook displaying 1/2 vs 2/6 side by side.",
+    "Step 2: Contrastive peer debate on denominator scaling.",
+    "Step 3: Exit check with 1/3 + 1/6."
+  ],
+  "differentiated_groups": [
+    {
+      "group_name": "Needs Conceptual Grounding",
+      "focus_story": "misconception",
+      "student_count": 7,
+      "student_nicknames": ["Asha", "Marcus"],
+      "suggested_action": "Use concrete fraction circles before giving numerical problems."
+    }
+  ],
+  "generated_by_model": "gemini-3.5-flash-lite"
+}
+```
+
