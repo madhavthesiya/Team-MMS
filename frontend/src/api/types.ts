@@ -429,3 +429,46 @@ export interface AISummaryOut {
   generated_by_model: string;
 }
 
+export type UserRole = "teacher" | "student";
+
+export interface User {
+  id: number;
+  role: UserRole;
+  email: string;
+  username: string;
+  full_name: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export interface TeacherClassItem {
+  class_id: number;
+  name: string;
+  join_code: string;
+  teacher_token?: string | null;
+  is_sample: boolean;
+  created_at: string;
+  student_count: number;
+  question_count: number;
+}
+
+export interface StudentEnrollmentItem {
+  student_id: number;
+  class_id: number;
+  class_name: string;
+  nickname: string;
+  student_token?: string | null;
+  answered_count: number;
+  total_questions: number;
+}
+
+export interface UserProfile {
+  user: User;
+  classes: TeacherClassItem[];
+  enrollments: StudentEnrollmentItem[];
+}
+

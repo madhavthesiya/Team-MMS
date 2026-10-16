@@ -7,13 +7,30 @@ current reading is the highest version. Nothing is deleted except when a teacher
 from datetime import datetime, timezone
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from app.db import Base
 
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class User(Base):
+    """Real user account for a teacher or student."""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    role: Mapped[str] = mapped_column(String(20))  # "teacher" or "student"
+    email: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    full_name: Mapped[str] = mapped_column(String(80))
+    password_hash: Mapped[str] = mapped_column(String(128))
+    auth_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    classes: Mapped[list["ClassRoom"]] = relationship("ClassRoom", back_populates="teacher_user", primaryjoin="User.id == foreign(ClassRoom.teacher_user_id)")
+    students: Mapped[list["Student"]] = relationship("Student", back_populates="user", primaryjoin="User.id == foreign(Student.user_id)")
 
 
 class ClassRoom(Base):
@@ -23,9 +40,13 @@ class ClassRoom(Base):
     name: Mapped[str] = mapped_column(String(80))
     join_code: Mapped[str] = mapped_column(String(6), unique=True, index=True)
     teacher_token_hash: Mapped[str] = mapped_column(String(64))
+    teacher_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_sample: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
+    teacher_user: Mapped["User | None"] = relationship(
+        "User", back_populates="classes", primaryjoin="foreign(ClassRoom.teacher_user_id) == User.id"
+    )
     quiz: Mapped["Quiz | None"] = relationship(
         back_populates="classroom", cascade="all, delete-orphan", uselist=False
     )
@@ -90,8 +111,12 @@ class Student(Base):
     class_id: Mapped[int] = mapped_column(ForeignKey("classes.id", ondelete="CASCADE"))
     nickname: Mapped[str] = mapped_column(String(30))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
+    user: Mapped["User | None"] = relationship(
+        "User", back_populates="students", primaryjoin="foreign(Student.user_id) == User.id"
+    )
     classroom: Mapped[ClassRoom] = relationship(back_populates="students")
     responses: Mapped[list["Response"]] = relationship(back_populates="student", cascade="all, delete-orphan")
     rechecks: Mapped[list["Recheck"]] = relationship(back_populates="student", cascade="all, delete-orphan")

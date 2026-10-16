@@ -1,22 +1,27 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Menu, RotateCw, X } from "lucide-react";
+import { ArrowUpRight, GraduationCap, Menu, RotateCw, UserCheck, Users, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "../api/client";
+import { storage } from "../lib/storage";
+import type { User } from "../api/types";
 import { Brand } from "./Brand";
 import SwarmCursor from "./SwarmCursor";
-
+import { AuthModal } from "./AuthModal";
 
 const navigation = [
   { to: "/", label: "Overview" },
   { to: "/teacher/new", label: "Create a class" },
   { to: "/join", label: "Join a class" },
+  { to: "/account", label: "Account" },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [health, setHealth] = useState<"checking" | "online" | "offline">("checking");
   const [openPath, setOpenPath] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<User | null>(() => storage.authUser());
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const menuOpen = openPath === location.pathname;
   const isLanding = location.pathname === "/";
@@ -28,6 +33,12 @@ export function Layout({ children }: { children: ReactNode }) {
       .then((data) => { if (active) setHealth(data.status === "ok" ? "online" : "offline"); })
       .catch(() => { if (active) setHealth("offline"); });
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const syncAuth = () => setAuthUser(storage.authUser());
+    window.addEventListener("btm_auth_change", syncAuth);
+    return () => window.removeEventListener("btm_auth_change", syncAuth);
   }, []);
 
   useEffect(() => {
@@ -100,6 +111,33 @@ export function Layout({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="header-tools">
+            {authUser ? (
+              <Link
+                to="/account"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 text-xs font-mono text-white transition-all shadow-sm"
+                title={`Logged in as ${authUser.full_name} (${authUser.role})`}
+              >
+                {authUser.role === "teacher" ? (
+                  <GraduationCap size={13} className="text-zinc-300" />
+                ) : (
+                  <Users size={13} className="text-zinc-300" />
+                )}
+                <span className="font-semibold max-w-[100px] truncate">{authUser.full_name.split(" ")[0]}</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-zinc-400 capitalize hidden sm:inline">
+                  {authUser.role}
+                </span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 text-xs text-white transition-all cursor-pointer font-medium"
+              >
+                <UserCheck size={13} className="text-zinc-400" />
+                <span>Account</span>
+              </button>
+            )}
+
             <div className="connection-status" role="status" aria-label="Service connection">
               <span className={["status-dot", health].join(" ")} aria-hidden="true" />
               <span>{health === "online" ? "Service online" : health === "offline" ? "Connection issue" : "Connecting"}</span>
@@ -163,6 +201,12 @@ export function Layout({ children }: { children: ReactNode }) {
           <span>Teacher-led understanding</span>
         </footer>
       )}
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => setAuthUser(storage.authUser())}
+      />
     </div>
   );
 }

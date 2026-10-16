@@ -20,3 +20,21 @@ def token_matches(token: str, token_hash: str) -> bool:
 
 def new_join_code() -> str:
     return "".join(secrets.choice(_JOIN_ALPHABET) for _ in range(6))
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256((salt + password).encode()).hexdigest()
+    return f"{salt}${hashed}"
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    if "$" not in stored_hash:
+        return False
+    salt, hashed = stored_hash.split("$", 1)
+    test_hash = hashlib.sha256((salt + password).encode()).hexdigest()
+    return hmac.compare_digest(test_hash, hashed)
+
+
+def new_auth_token() -> str:
+    return secrets.token_urlsafe(32)

@@ -1,3 +1,5 @@
+import type { User } from "../api/types";
+
 // In-memory fallback for private browsing or storage-restricted environments
 const memory = new Map<string, string>();
 
@@ -35,4 +37,24 @@ export const storage = {
     write(`btm.teacher.${classId}`, token),
   studentToken: (): string | null => read("btm.student"),
   setStudentToken: (token: string | null): void => write("btm.student", token),
+
+  // Real User & Teacher Account session storage
+  authToken: (): string | null => read("btm.auth.token"),
+  setAuthToken: (token: string | null): void => write("btm.auth.token", token),
+  authUser: (): User | null => {
+    const raw = read("btm.auth.user");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      return null;
+    }
+  },
+  setAuthUser: (user: User | null): void => {
+    write("btm.auth.user", user ? JSON.stringify(user) : null);
+  },
+  clearAuth: (): void => {
+    write("btm.auth.token", null);
+    write("btm.auth.user", null);
+  },
 };

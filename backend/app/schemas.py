@@ -521,3 +521,72 @@ class AISummaryOut(BaseModel):
     differentiated_groups: list[DifferentiatedGroup]
     generated_by_model: str
 
+
+# ---------- User / Teacher Accounts ----------
+
+UserRole = Literal["teacher", "student"]
+
+
+class UserRegisterIn(BaseModel):
+    role: UserRole = "teacher"
+    email: str
+    username: Str80
+    full_name: Str80
+    password: str = Field(min_length=6, max_length=128)
+
+
+class UserLoginIn(BaseModel):
+    identifier: str  # email or username
+    password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    role: str
+    email: str
+    username: str
+    full_name: str
+    created_at: datetime
+
+
+class AuthOut(BaseModel):
+    token: str
+    user: UserOut
+
+
+class TeacherClassItem(BaseModel):
+    class_id: int
+    name: str
+    join_code: str
+    teacher_token: str | None = None
+    is_sample: bool
+    created_at: datetime
+    student_count: int
+    question_count: int
+
+
+class StudentEnrollmentItem(BaseModel):
+    student_id: int
+    class_id: int
+    class_name: str
+    nickname: str
+    student_token: str | None = None
+    answered_count: int
+    total_questions: int
+
+
+class UserProfileOut(BaseModel):
+    user: UserOut
+    classes: list[TeacherClassItem] = Field(default_factory=list)
+    enrollments: list[StudentEnrollmentItem] = Field(default_factory=list)
+
+
+class LinkClassIn(BaseModel):
+    class_id: int
+    teacher_token: str
+
+
+class LinkStudentIn(BaseModel):
+    join_code: str
+    nickname: str
+

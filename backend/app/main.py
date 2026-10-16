@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.ai.client import build_ai_client
-from app.api import classes, health, responses, students
+from app.api import auth, classes, health, responses, students
 from app.config import Settings, get_settings
 from app.db import configure_db, init_db
 from app.rate_limit import RateLimiter
@@ -62,7 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def _domain_error(_: Request, exc: DomainError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
 
-    for module in (health, classes, students, responses):
+    for module in (health, classes, students, responses, auth):
         app.include_router(module.router)
     _mount_frontend(app, settings.frontend_dist)
     return app

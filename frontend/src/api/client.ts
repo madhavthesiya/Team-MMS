@@ -1,8 +1,10 @@
+import { storage } from "../lib/storage";
 import type {
   AIGenerateQuestionIn,
   AIGenerateQuestionOut,
   AIInterventionOut,
   AISummaryOut,
+  AuthResponse,
   ClassCreated,
   ClassInfo,
   DeclineReason,
@@ -21,6 +23,7 @@ import type {
   TransferItem,
   TransferItemIn,
   TransferReport,
+  UserProfile,
 } from "./types";
 
 export class ApiError extends Error {
@@ -32,7 +35,7 @@ export class ApiError extends Error {
   }
 }
 
-type Auth = { teacher?: string; student?: string };
+type Auth = { teacher?: string; student?: string; bearer?: string };
 
 function messageFrom(status: number, body: unknown): string {
   if (body && typeof body === "object" && "detail" in body) {
@@ -59,6 +62,8 @@ async function request<T>(
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (auth.teacher) headers["X-Teacher-Token"] = auth.teacher;
   if (auth.student) headers["X-Student-Token"] = auth.student;
+  const bearer = auth.bearer ?? storage.authToken();
+  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -167,5 +172,20 @@ export const api = {
       undefined,
       { teacher: token },
       40000
+    ),
+  // Real User & Teacher Account Authentication APIs
+  register: (payload: { role: "teacher" | "student"; email: string; username: string; full_name: string; password: string }) =>
+    request<AuthResponse>("POST", "/auth/register", payload),
+  login: (payload: { identifier: string; password: string }) =>
+    request<AuthResponse>("POST", "/auth/login", payload),
+  getMe: (token?: string) =>
+    request<UserProfile>("GET", "/auth/me", undefined, { bearer: token || storage.authToken() || undefined }),
+  linkClass: (classId: number, teacherToken: string, token?: string) =>
+    request<{ status: string; class_id: number; class_name: string }>(
+      "POST", "/auth/link-class", { class_id: classId, teacher_token: teacherToken }, { bearer: token || storage.authToken() || undefined }
+    ),
+  linkStudent: (joinCode: string, nickname: string, token?: string) =>
+    request<{ status: string; student_id: number; nickname: string }>(
+      "POST", "/auth/link-student", { join_code: joinCode, nickname }, { bearer: token || storage.authToken() || undefined }
     ),
 };

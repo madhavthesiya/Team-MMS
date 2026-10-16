@@ -8,6 +8,7 @@ import Results from "./pages/teacher/Results";
 import ResponseDetail from "./pages/teacher/ResponseDetail";
 import Join from "./pages/student/Join";
 import StudentQuiz from "./pages/student/Quiz";
+import Account from "./pages/Account";
 import { EmptyState } from "./components/EmptyState";
 import { Link } from "react-router-dom";
 
@@ -16,6 +17,7 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/teacher/new" element={<CreateClass />} />
         <Route path="/teacher/:classId" element={<ClassHome />} />
         <Route path="/teacher/:classId/quiz" element={<QuizBuilder />} />

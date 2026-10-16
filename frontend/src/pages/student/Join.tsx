@@ -151,9 +151,22 @@ export default function Join() {
                     className="w-full rounded-xl border border-white/20 bg-zinc-950 px-4 py-3 font-mono text-center text-2xl font-black tracking-widest text-white placeholder-zinc-700 outline-none focus:border-white focus:ring-1 focus:ring-white/20 uppercase transition-colors"
                     disabled={loading}
                   />
-                  <span className="text-[11px] text-zinc-500 mt-1 block">
-                    Codes are 6 letters. Ask your teacher for the code, or try the sample class on the home page.
-                  </span>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[11px] text-zinc-500">
+                      Codes are 6 letters from your teacher.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCode("MMS789");
+                        setNickname("StudentUser");
+                      }}
+                      className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3 text-zinc-400" />
+                      <span>Fill: MMS789</span>
+                    </button>
+                  </div>
                 </div>
 
                 <Input

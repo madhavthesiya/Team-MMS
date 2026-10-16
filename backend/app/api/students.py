@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
+from app import models
+from app.api.auth import get_optional_user
 from app.api.deps import AIDep, AppSettings, CurrentStudent, DbSession
 from app.rate_limit import limit_public, limit_student
 from app.schemas import DeclineIn, JoinIn, JoinOut, RecheckAnswerIn, ReplyIn, ReplyOut, StudentOut
@@ -11,8 +13,10 @@ router = APIRouter(prefix="/api", tags=["students"])
 
 
 @router.post("/join", status_code=status.HTTP_201_CREATED, dependencies=[Depends(limit_public)])
-def join(body: JoinIn, db: DbSession) -> JoinOut:
+def join(body: JoinIn, db: DbSession, user: models.User | None = Depends(get_optional_user)) -> JoinOut:
     student, token = join_class(db, body.join_code, body.nickname)
+    if user and user.role == "student":
+        student.user_id = user.id
     db.commit()
     return JoinOut(**student_out(student).model_dump(), student_token=token)
 

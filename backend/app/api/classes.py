@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, status
 from fastapi import Response as HttpResponse
 
+from app import models
+from app.api.auth import get_optional_user
 from app.api.deps import AIDep, AppSettings, DbSession, TeacherClass
 from app.rate_limit import limit_public
 from app.schemas import (
@@ -30,15 +32,23 @@ router = APIRouter(prefix="/api/classes", tags=["classes"])
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(limit_public)])
-def create_class(body: ClassCreate, db: DbSession) -> ClassCreated:
+def create_class(
+    body: ClassCreate, db: DbSession, user: models.User | None = Depends(get_optional_user)
+) -> ClassCreated:
     cls, token = create_classroom(db, body.name)
+    if user and user.role == "teacher":
+        cls.teacher_user_id = user.id
     db.commit()
     return ClassCreated(class_id=cls.id, name=cls.name, join_code=cls.join_code, teacher_token=token)
 
 
 @router.post("/sample", status_code=status.HTTP_201_CREATED, dependencies=[Depends(limit_public)])
-def create_sample_class(db: DbSession) -> ClassCreated:
+def create_sample_class(
+    db: DbSession, user: models.User | None = Depends(get_optional_user)
+) -> ClassCreated:
     cls, token = create_classroom(db, SAMPLE_CLASS_NAME, is_sample=True)
+    if user and user.role == "teacher":
+        cls.teacher_user_id = user.id
     replace_quiz(db, cls, load_sample_quiz())
     db.commit()
     return ClassCreated(class_id=cls.id, name=cls.name, join_code=cls.join_code, teacher_token=token)

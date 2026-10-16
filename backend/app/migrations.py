@@ -21,6 +21,8 @@ ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("follow_ups", "rationale", "TEXT NOT NULL DEFAULT ''"),
     ("follow_ups", "expected_evidence", "JSON NOT NULL DEFAULT '[]'"),
     ("follow_ups", "declined_reason", "VARCHAR(24) NOT NULL DEFAULT ''"),
+    ("classes", "teacher_user_id", "INTEGER"),
+    ("students", "user_id", "INTEGER"),
 ]
 DIAGNOSIS_VERSION_INDEX = "uq_diagnoses_response_version"
 

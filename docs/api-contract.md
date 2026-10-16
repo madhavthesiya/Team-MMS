@@ -1,4 +1,6 @@
-# BehindTheMark — API Contract (v1.5)
+# BehindTheMark — API Contract (v1.6)
+
+> v1.6 (Real User and Teacher Accounts): persistent teacher and student accounts with salted password auth; `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/link-class`, `POST /api/auth/link-student`. Authenticated users automatically link created classes and student quiz enrollments. Existing token-based flows remain 100% backward-compatible.
 
 > v1.5 (Riddle 4 — Better Marks, Better Understanding?): questions carry teacher-written `transfer_items` (the same idea in a changed situation); new teacher `POST /api/classes/{id}/questions/{qid}/transfer-items`, `POST /api/classes/{id}/rechecks`, `GET /api/classes/{id}/transfer`; `GET /api/students/me` adds `rechecks` (open check-ins); new student `POST /api/rechecks/{id}/answer`; `ResponseDetail.rechecks`. Existing shapes unchanged.
 
@@ -39,6 +41,32 @@ UI copy for labels (use these words; never show raw enum to users):
 
 ### `GET /api/health`
 `200` → `{"status": "ok", "db": "ok", "ai_configured": true}`
+
+## Accounts & Authentication
+
+### `POST /api/auth/register`
+Body `{"role": "teacher" | "student", "email": "...", "username": "...", "full_name": "...", "password": "..."}`
+`201` → `{"token": "...", "user": {"id": 1, "role": "teacher", "email": "...", "username": "...", "full_name": "...", "created_at": "..."}}`
+`409` if email or username already exists.
+
+### `POST /api/auth/login`
+Body `{"identifier": "...", "password": "..."}` (identifier can be email or username)
+`200` → `{"token": "...", "user": {...}}`
+`401` if invalid credentials.
+
+### `GET /api/auth/me`
+Header: `Authorization: Bearer <auth_token>`
+`200` → Returns user profile with managed `classes` (if teacher) or active `enrollments` (if student).
+
+### `POST /api/auth/link-class` · teacher
+Header: `Authorization: Bearer <auth_token>`
+Body `{"class_id": 11, "teacher_token": "..."}`
+`200` → Associates existing class with teacher account.
+
+### `POST /api/auth/link-student` · student
+Header: `Authorization: Bearer <auth_token>`
+Body `{"join_code": "MMS789", "nickname": "..."}`
+`200` → Associates existing class enrollment with student account.
 
 ## Classes (teacher)
 

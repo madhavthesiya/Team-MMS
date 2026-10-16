@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, BookOpen, Check, Fingerprint, FlaskConical, MessageSquare, Route, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen, Check, Fingerprint, FlaskConical, MessageSquare, Route, ShieldCheck, Sparkles, UserCheck, Users } from "lucide-react";
 import { api } from "../api/client";
 import { storage } from "../lib/storage";
 import { Button } from "../components/ui/Button";
 import { ErrorBox } from "../components/ErrorBox";
+import { AuthModal } from "../components/AuthModal";
 
 const workflow = [
   { icon: BookOpen, number: "01", title: "Start with their thinking", text: "Collect an answer, an explanation and a confidence check. Keep the original evidence intact." },
@@ -17,6 +18,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [loadingSample, setLoadingSample] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   async function handleTrySample() {
     setLoadingSample(true);
@@ -49,10 +51,18 @@ export default function Landing() {
               Try the sample class
             </Button>
             <Link to="/teacher/new" className="button-link secondary">Create a class</Link>
+            <button
+              type="button"
+              onClick={() => setAuthModalOpen(true)}
+              className="button-link secondary flex items-center gap-1.5 cursor-pointer"
+            >
+              <UserCheck size={16} />
+              <span>Sign In / Accounts</span>
+            </button>
           </div>
           <div className="hero-note">
             <Check size={15} aria-hidden="true" />
-            <span>No account needed. Sample questions, not pre-filled results.</span>
+            <span>Real persistent accounts or instant guest access. Zero pre-filled results.</span>
           </div>
           <Link to="/join" className="student-entry">
             Joining your teacher’s class? <span>Enter a join code <ArrowUpRight size={16} aria-hidden="true" /></span>
@@ -133,6 +143,12 @@ export default function Landing() {
       <div className="privacy-note"><ShieldCheck size={18} aria-hidden="true" />
         <p>Use nicknames and avoid personal details. Explanations may be sent to an AI provider to support your teacher’s review.</p>
       </div>
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => navigate("/account")}
+      />
     </div>
   );
 }
