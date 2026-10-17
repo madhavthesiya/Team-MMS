@@ -1,8 +1,21 @@
 # Project status
 
-**Latest inspection:** 2026-10-17, shared UI polish over Claude's `98ca870` on `riddle-4-transfer`. Earlier Riddle 3 integration evidence is preserved below.
+**Latest inspection:** 2026-10-17, comprehensive evaluation readiness, ADRs, threat model matrix, OpenAPI 3.1 export, and one-click verification suite.
 
 This is a point-in-time handoff. Recheck the current branch, filesystem, and tests before treating an item as current. Unchecked steps in an older implementation plan are not a reliable implementation inventory.
+
+## System Verification & Evaluation Readiness — 2026-10-17
+
+- **Architecture Decision Records:** Six formal records created in `docs/adr/` (ADR 0001 through 0006) covering deterministic code grading, zero-PII sessions, competing hypotheses pipeline, surgical follow-ups, transfer testing over time, and dual-provider rotation/fallback.
+- **Formal Threat Model:** STRIDE analysis and multi-layer prompt injection defense matrix added to `SECURITY.md`.
+- **Performance & Latency Budgets:** Documented SLA latency targets and hard timeout budgets for all student and teacher endpoints in `docs/architecture.md`.
+- **OpenAPI 3.1 Specification:** Exported exact schema directly from FastAPI to `docs/openapi.json` (102 KB).
+- **One-Click Verification Suite:** Created `scripts/verify.ps1` and `scripts/verify.sh` providing a single-command pass over pytest (175 tests), npm build (clean), evaluation benchmark (51 cases), and git security hygiene.
+- **Terminal CLI Demo Tool:** Implemented `backend/app/demo.py` allowing human judges and automated evaluators to run diagnostic simulations directly from the command line without launching web servers (`--case asha`, `--case leo`, `--case misconception`, `--case timeout`, `--interactive`).
+- **Live Production Environments:** Verified live URLs:
+  - Frontend: `https://team-mms.vercel.app/`
+  - Backend API: `https://team-mms.onrender.com`
+  - Swagger Documentation: `https://team-mms.onrender.com/docs`
 
 ## Shared UI polish verification — 2026-10-17
 

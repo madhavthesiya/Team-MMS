@@ -1,0 +1,3951 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BehindTheMark API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Create Class",
+        "operationId": "create_class_api_classes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/sample": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Create Sample Class",
+        "operationId": "create_sample_class_api_classes_sample_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassCreated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}": {
+      "get": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Get Class",
+        "operationId": "get_class_api_classes__class_id__get",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Delete Class",
+        "operationId": "delete_class_api_classes__class_id__delete",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/quiz": {
+      "put": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Put Quiz",
+        "operationId": "put_quiz_api_classes__class_id__quiz_put",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/results": {
+      "get": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Get Results",
+        "operationId": "get_results_api_classes__class_id__results_get",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/ai-generate-question": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Ai Generate Question",
+        "description": "Generate a conceptual diagnostic question with researched misconceptions.",
+        "operationId": "ai_generate_question_api_classes__class_id__ai_generate_question_post",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIGenerateQuestionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIGenerateQuestionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/ai-summary": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Ai Class Summary",
+        "description": "Generate classroom-wide cognitive executive synthesis and 10-minute warm-up reteach plan.",
+        "operationId": "ai_class_summary_api_classes__class_id__ai_summary_post",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AISummaryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/questions/{question_id}/transfer-items": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Create Transfer Item",
+        "description": "Add the same idea in a new situation. Allowed after students have answered: it adds no evidence.",
+        "operationId": "create_transfer_item_api_classes__class_id__questions__question_id__transfer_items_post",
+        "parameters": [
+          {
+            "name": "question_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Question Id"
+            }
+          },
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferItemIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferItemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/rechecks": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Create Rechecks",
+        "description": "Offer a next step and schedule an unaided re-check in a changed situation, after a delay.",
+        "operationId": "create_rechecks_api_classes__class_id__rechecks_post",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleRechecksIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleRechecksOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classes/{class_id}/transfer": {
+      "get": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Get Transfer Report",
+        "description": "Better marks vs better understanding, per question, with every re-check and its verdict.",
+        "operationId": "get_transfer_report_api_classes__class_id__transfer_get",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/join": {
+      "post": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Join",
+        "operationId": "join_api_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/students/me": {
+      "get": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_students_me_get",
+        "parameters": [
+          {
+            "name": "x-student-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Student-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follow-ups/{follow_up_id}/reply": {
+      "post": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Reply",
+        "operationId": "reply_api_follow_ups__follow_up_id__reply_post",
+        "parameters": [
+          {
+            "name": "follow_up_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Follow Up Id"
+            }
+          },
+          {
+            "name": "x-student-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Student-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follow-ups/{follow_up_id}/resume": {
+      "post": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Resume",
+        "description": "Finish processing a saved reply (after a timeout, crash or failed save). Safe to repeat.",
+        "operationId": "resume_api_follow_ups__follow_up_id__resume_post",
+        "parameters": [
+          {
+            "name": "follow_up_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Follow Up Id"
+            }
+          },
+          {
+            "name": "x-student-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Student-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follow-ups/{follow_up_id}/decline": {
+      "post": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Decline",
+        "description": "Stop the optional check without asking the model to interpret a refusal.",
+        "operationId": "decline_api_follow_ups__follow_up_id__decline_post",
+        "parameters": [
+          {
+            "name": "follow_up_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Follow Up Id"
+            }
+          },
+          {
+            "name": "x-student-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Student-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rechecks/{recheck_id}/answer": {
+      "post": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Answer Check In",
+        "description": "Riddle 4: a later check-in in a changed situation, answered without follow-ups or hints.\nLike every student endpoint, it never returns correctness or a verdict.",
+        "operationId": "answer_check_in_api_rechecks__recheck_id__answer_post",
+        "parameters": [
+          {
+            "name": "recheck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recheck Id"
+            }
+          },
+          {
+            "name": "x-student-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Student-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecheckAnswerIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/responses": {
+      "post": {
+        "tags": [
+          "responses"
+        ],
+        "summary": "Submit",
+        "description": "Student submits an answer. The response never includes correctness or a label.",
+        "operationId": "submit_api_responses_post",
+        "parameters": [
+          {
+            "name": "x-student-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Student-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponseIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/responses/{response_id}": {
+      "get": {
+        "tags": [
+          "responses"
+        ],
+        "summary": "Get Response",
+        "operationId": "get_response_api_responses__response_id__get",
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Response Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/responses/{response_id}/override": {
+      "post": {
+        "tags": [
+          "responses"
+        ],
+        "summary": "Override",
+        "operationId": "override_api_responses__response_id__override_post",
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Response Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/responses/{response_id}/ai-intervention": {
+      "post": {
+        "tags": [
+          "responses"
+        ],
+        "summary": "Get Ai Intervention",
+        "description": "Generate 1-on-1 pedagogical desk intervention and conversational dialogue script.",
+        "operationId": "get_ai_intervention_api_responses__response_id__ai_intervention_post",
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Response Id"
+            }
+          },
+          {
+            "name": "x-teacher-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Teacher-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIInterventionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AIGenerateQuestionIn": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Topic"
+          },
+          "grade_level": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Grade Level",
+            "default": "Middle School"
+          },
+          "misconception_focus": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Misconception Focus",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "title": "AIGenerateQuestionIn"
+      },
+      "AIGenerateQuestionOut": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "correct_answer": {
+            "type": "string",
+            "title": "Correct Answer"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "key_idea": {
+            "type": "string",
+            "title": "Key Idea"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "misconceptions": {
+            "items": {
+              "$ref": "#/components/schemas/AIMisconceptionDraft"
+            },
+            "type": "array",
+            "title": "Misconceptions"
+          },
+          "time_limit_seconds": {
+            "type": "integer",
+            "title": "Time Limit Seconds",
+            "default": 90
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt",
+          "correct_answer",
+          "answer_type",
+          "key_idea"
+        ],
+        "title": "AIGenerateQuestionOut"
+      },
+      "AIInterventionOut": {
+        "properties": {
+          "student_nickname": {
+            "type": "string",
+            "title": "Student Nickname"
+          },
+          "diagnosed_label": {
+            "type": "string",
+            "title": "Diagnosed Label"
+          },
+          "misconception_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Name"
+          },
+          "misconception_breakdown": {
+            "type": "string",
+            "title": "Misconception Breakdown"
+          },
+          "one_on_one_script": {
+            "items": {
+              "$ref": "#/components/schemas/ScriptTurn"
+            },
+            "type": "array",
+            "title": "One On One Script"
+          },
+          "concrete_counterexample": {
+            "type": "string",
+            "title": "Concrete Counterexample"
+          },
+          "check_for_understanding_question": {
+            "type": "string",
+            "title": "Check For Understanding Question"
+          },
+          "generated_by_model": {
+            "type": "string",
+            "title": "Generated By Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_nickname",
+          "diagnosed_label",
+          "misconception_name",
+          "misconception_breakdown",
+          "one_on_one_script",
+          "concrete_counterexample",
+          "check_for_understanding_question",
+          "generated_by_model"
+        ],
+        "title": "AIInterventionOut"
+      },
+      "AIMisconceptionDraft": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "trigger_answers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Trigger Answers"
+          },
+          "signal_text": {
+            "type": "string",
+            "title": "Signal Text",
+            "default": ""
+          },
+          "remedy_hint": {
+            "type": "string",
+            "title": "Remedy Hint",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "AIMisconceptionDraft"
+      },
+      "AISummaryOut": {
+        "properties": {
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "quiz_topic": {
+            "type": "string",
+            "title": "Quiz Topic"
+          },
+          "total_students": {
+            "type": "integer",
+            "title": "Total Students"
+          },
+          "correct_count": {
+            "type": "integer",
+            "title": "Correct Count"
+          },
+          "accuracy_percentage": {
+            "type": "number",
+            "title": "Accuracy Percentage"
+          },
+          "executive_summary": {
+            "type": "string",
+            "title": "Executive Summary"
+          },
+          "dominant_misconception": {
+            "type": "string",
+            "title": "Dominant Misconception"
+          },
+          "undercover_guessers_warning": {
+            "type": "string",
+            "title": "Undercover Guessers Warning"
+          },
+          "ten_minute_reteach_plan": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ten Minute Reteach Plan"
+          },
+          "differentiated_groups": {
+            "items": {
+              "$ref": "#/components/schemas/DifferentiatedGroup"
+            },
+            "type": "array",
+            "title": "Differentiated Groups"
+          },
+          "generated_by_model": {
+            "type": "string",
+            "title": "Generated By Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_name",
+          "quiz_topic",
+          "total_students",
+          "correct_count",
+          "accuracy_percentage",
+          "executive_summary",
+          "dominant_misconception",
+          "undercover_guessers_warning",
+          "ten_minute_reteach_plan",
+          "differentiated_groups",
+          "generated_by_model"
+        ],
+        "title": "AISummaryOut"
+      },
+      "ClassCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ClassCreate"
+      },
+      "ClassCreated": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "join_code": {
+            "type": "string",
+            "title": "Join Code"
+          },
+          "teacher_token": {
+            "type": "string",
+            "title": "Teacher Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_id",
+          "name",
+          "join_code",
+          "teacher_token"
+        ],
+        "title": "ClassCreated"
+      },
+      "ClassOut": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "join_code": {
+            "type": "string",
+            "title": "Join Code"
+          },
+          "is_sample": {
+            "type": "boolean",
+            "title": "Is Sample"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "quiz": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuizOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_id",
+          "name",
+          "join_code",
+          "is_sample",
+          "created_at",
+          "quiz"
+        ],
+        "title": "ClassOut"
+      },
+      "CorrectnessGroup": {
+        "properties": {
+          "is_correct": {
+            "type": "boolean",
+            "title": "Is Correct"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/LabelGroup"
+            },
+            "type": "array",
+            "title": "Labels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_correct",
+          "count",
+          "labels"
+        ],
+        "title": "CorrectnessGroup"
+      },
+      "DeclineIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "skip",
+              "not_sure",
+              "teacher"
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "DeclineIn"
+      },
+      "DiagnosisView": {
+        "properties": {
+          "diagnosis_id": {
+            "type": "integer",
+            "title": "Diagnosis Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time",
+              "not_sure"
+            ],
+            "title": "Label"
+          },
+          "misconception_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Id"
+          },
+          "misconception_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Label"
+          },
+          "certainty": {
+            "type": "number",
+            "title": "Certainty"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "rule",
+              "ai",
+              "both",
+              "teacher"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "settled",
+              "not_sure"
+            ],
+            "title": "Status"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "hypotheses": {
+            "items": {
+              "$ref": "#/components/schemas/HypothesisView"
+            },
+            "type": "array",
+            "title": "Hypotheses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "diagnosis_id",
+          "version",
+          "label",
+          "misconception_id",
+          "misconception_label",
+          "certainty",
+          "source",
+          "status",
+          "note",
+          "created_at",
+          "hypotheses"
+        ],
+        "title": "DiagnosisView"
+      },
+      "DifferentiatedGroup": {
+        "properties": {
+          "group_name": {
+            "type": "string",
+            "title": "Group Name"
+          },
+          "focus_story": {
+            "type": "string",
+            "title": "Focus Story"
+          },
+          "student_count": {
+            "type": "integer",
+            "title": "Student Count"
+          },
+          "student_nicknames": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Student Nicknames"
+          },
+          "suggested_action": {
+            "type": "string",
+            "title": "Suggested Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_name",
+          "focus_story",
+          "student_count",
+          "student_nicknames",
+          "suggested_action"
+        ],
+        "title": "DifferentiatedGroup"
+      },
+      "ExpectedEvidenceView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time"
+            ],
+            "title": "Kind"
+          },
+          "misconception_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Id"
+          },
+          "observation": {
+            "type": "string",
+            "title": "Observation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "misconception_id",
+          "observation"
+        ],
+        "title": "ExpectedEvidenceView"
+      },
+      "FollowUpOut": {
+        "properties": {
+          "follow_up_id": {
+            "type": "integer",
+            "title": "Follow Up Id"
+          },
+          "question_text": {
+            "type": "string",
+            "title": "Question Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "follow_up_id",
+          "question_text"
+        ],
+        "title": "FollowUpOut"
+      },
+      "FollowUpView": {
+        "properties": {
+          "question_text": {
+            "type": "string",
+            "title": "Question Text"
+          },
+          "student_reply": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Reply"
+          },
+          "answered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "default": ""
+          },
+          "expected_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/ExpectedEvidenceView"
+            },
+            "type": "array",
+            "title": "Expected Evidence"
+          },
+          "declined_reason": {
+            "type": "string",
+            "title": "Declined Reason",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_text",
+          "student_reply",
+          "answered_at"
+        ],
+        "title": "FollowUpView"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoryEntry": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time",
+              "not_sure"
+            ],
+            "title": "Label"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "rule",
+              "ai",
+              "both",
+              "teacher"
+            ],
+            "title": "Source"
+          },
+          "certainty": {
+            "type": "number",
+            "title": "Certainty"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "settled",
+              "not_sure"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "label",
+          "source",
+          "certainty",
+          "status",
+          "created_at"
+        ],
+        "title": "HistoryEntry"
+      },
+      "HypothesisView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time"
+            ],
+            "title": "Kind"
+          },
+          "misconception_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Id"
+          },
+          "misconception_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Label"
+          },
+          "evidence_for": {
+            "type": "string",
+            "title": "Evidence For"
+          },
+          "evidence_against": {
+            "type": "string",
+            "title": "Evidence Against"
+          },
+          "likelihood": {
+            "type": "number",
+            "title": "Likelihood"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "supported",
+              "ruled_out"
+            ],
+            "title": "Status"
+          },
+          "would_confirm": {
+            "type": "string",
+            "title": "Would Confirm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "misconception_id",
+          "misconception_label",
+          "evidence_for",
+          "evidence_against",
+          "likelihood",
+          "status",
+          "would_confirm"
+        ],
+        "title": "HypothesisView"
+      },
+      "JoinIn": {
+        "properties": {
+          "join_code": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Join Code"
+          },
+          "nickname": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Nickname"
+          }
+        },
+        "type": "object",
+        "required": [
+          "join_code",
+          "nickname"
+        ],
+        "title": "JoinIn"
+      },
+      "JoinOut": {
+        "properties": {
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "quiz": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudentQuizOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answered_question_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answered Question Ids"
+          },
+          "pending_follow_ups": {
+            "items": {
+              "$ref": "#/components/schemas/PendingFollowUpOut"
+            },
+            "type": "array",
+            "title": "Pending Follow Ups"
+          },
+          "rechecks": {
+            "items": {
+              "$ref": "#/components/schemas/StudentRecheckOut"
+            },
+            "type": "array",
+            "title": "Rechecks"
+          },
+          "student_token": {
+            "type": "string",
+            "title": "Student Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "nickname",
+          "class_name",
+          "quiz",
+          "answered_question_ids",
+          "pending_follow_ups",
+          "student_token"
+        ],
+        "title": "JoinOut"
+      },
+      "LabelGroup": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time",
+              "not_sure"
+            ],
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/StudentEntry"
+            },
+            "type": "array",
+            "title": "Students"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "count",
+          "students"
+        ],
+        "title": "LabelGroup"
+      },
+      "MisconceptionIn": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "trigger_answers": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Trigger Answers"
+          },
+          "signal_text": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Signal Text",
+            "default": ""
+          },
+          "remedy_hint": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Remedy Hint",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "MisconceptionIn"
+      },
+      "MisconceptionOut": {
+        "properties": {
+          "misconception_id": {
+            "type": "integer",
+            "title": "Misconception Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "trigger_answers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Trigger Answers"
+          },
+          "signal_text": {
+            "type": "string",
+            "title": "Signal Text"
+          },
+          "remedy_hint": {
+            "type": "string",
+            "title": "Remedy Hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "misconception_id",
+          "label",
+          "trigger_answers",
+          "signal_text",
+          "remedy_hint"
+        ],
+        "title": "MisconceptionOut"
+      },
+      "OverrideIn": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time",
+              "not_sure"
+            ],
+            "title": "Label"
+          },
+          "misconception_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Id"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "OverrideIn"
+      },
+      "PendingFollowUpOut": {
+        "properties": {
+          "follow_up_id": {
+            "type": "integer",
+            "title": "Follow Up Id"
+          },
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "question_text": {
+            "type": "string",
+            "title": "Question Text"
+          },
+          "reply_saved": {
+            "type": "boolean",
+            "title": "Reply Saved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "follow_up_id",
+          "question_id",
+          "question_text",
+          "reply_saved"
+        ],
+        "title": "PendingFollowUpOut"
+      },
+      "QuestionIn": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "correct_answer": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Correct Answer"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "key_idea": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Key Idea"
+          },
+          "choices": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Choices"
+          },
+          "misconceptions": {
+            "items": {
+              "$ref": "#/components/schemas/MisconceptionIn"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Misconceptions"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3600.0,
+                "minimum": 10.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          },
+          "transfer_items": {
+            "items": {
+              "$ref": "#/components/schemas/TransferItemIn"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Transfer Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt",
+          "correct_answer",
+          "answer_type",
+          "key_idea"
+        ],
+        "title": "QuestionIn"
+      },
+      "QuestionOut": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "correct_answer": {
+            "type": "string",
+            "title": "Correct Answer"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "key_idea": {
+            "type": "string",
+            "title": "Key Idea"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "misconceptions": {
+            "items": {
+              "$ref": "#/components/schemas/MisconceptionOut"
+            },
+            "type": "array",
+            "title": "Misconceptions"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          },
+          "transfer_items": {
+            "items": {
+              "$ref": "#/components/schemas/TransferItemOut"
+            },
+            "type": "array",
+            "title": "Transfer Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "position",
+          "prompt",
+          "correct_answer",
+          "answer_type",
+          "key_idea",
+          "choices",
+          "misconceptions",
+          "time_limit_seconds"
+        ],
+        "title": "QuestionOut"
+      },
+      "QuestionResults": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "correct_answer": {
+            "type": "string",
+            "title": "Correct Answer"
+          },
+          "total_responses": {
+            "type": "integer",
+            "title": "Total Responses"
+          },
+          "same_score_different_reasons": {
+            "type": "boolean",
+            "title": "Same Score Different Reasons"
+          },
+          "same_wrong_answer_different_stories": {
+            "type": "boolean",
+            "title": "Same Wrong Answer Different Stories"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CorrectnessGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "wrong_answers": {
+            "items": {
+              "$ref": "#/components/schemas/WrongAnswerGroup"
+            },
+            "type": "array",
+            "title": "Wrong Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "position",
+          "prompt",
+          "correct_answer",
+          "total_responses",
+          "same_score_different_reasons",
+          "same_wrong_answer_different_stories",
+          "groups",
+          "wrong_answers"
+        ],
+        "title": "QuestionResults"
+      },
+      "QuizIn": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Topic"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionIn"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "title",
+          "questions"
+        ],
+        "title": "QuizIn"
+      },
+      "QuizOut": {
+        "properties": {
+          "quiz_id": {
+            "type": "integer",
+            "title": "Quiz Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quiz_id",
+          "topic",
+          "title",
+          "questions"
+        ],
+        "title": "QuizOut"
+      },
+      "RecheckAnswerIn": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Explanation",
+            "default": ""
+          },
+          "self_confidence": {
+            "type": "string",
+            "enum": [
+              "sure",
+              "unsure",
+              "guessed"
+            ],
+            "title": "Self Confidence"
+          },
+          "time_spent_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 7200.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Spent Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "self_confidence"
+        ],
+        "title": "RecheckAnswerIn"
+      },
+      "RecheckHypothesis": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time"
+            ],
+            "title": "Kind"
+          },
+          "misconception_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Label"
+          },
+          "evidence_for": {
+            "type": "string",
+            "title": "Evidence For"
+          },
+          "evidence_against": {
+            "type": "string",
+            "title": "Evidence Against"
+          },
+          "likelihood": {
+            "type": "number",
+            "title": "Likelihood"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "supported",
+              "ruled_out"
+            ],
+            "title": "Status"
+          },
+          "would_confirm": {
+            "type": "string",
+            "title": "Would Confirm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "misconception_label",
+          "evidence_for",
+          "evidence_against",
+          "likelihood",
+          "status",
+          "would_confirm"
+        ],
+        "title": "RecheckHypothesis"
+      },
+      "RecheckView": {
+        "properties": {
+          "recheck_id": {
+            "type": "integer",
+            "title": "Recheck Id"
+          },
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "transfer_item": {
+            "$ref": "#/components/schemas/TransferItemOut"
+          },
+          "next_step": {
+            "type": "string",
+            "title": "Next Step"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "available_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available At"
+          },
+          "answered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "self_confidence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "sure",
+                  "unsure",
+                  "guessed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Confidence"
+          },
+          "time_spent_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Spent Seconds"
+          },
+          "is_correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Correct"
+          },
+          "reading_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "understood",
+                  "misread",
+                  "misconception",
+                  "guessed",
+                  "slip",
+                  "out_of_time",
+                  "not_sure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading Label"
+          },
+          "reading_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "rule",
+                  "ai",
+                  "both",
+                  "teacher"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading Source"
+          },
+          "misconception_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Label"
+          },
+          "hypotheses": {
+            "items": {
+              "$ref": "#/components/schemas/RecheckHypothesis"
+            },
+            "type": "array",
+            "title": "Hypotheses"
+          },
+          "gap_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Days"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "lasting",
+              "travelled",
+              "unconvincing",
+              "did_not_travel"
+            ],
+            "title": "Verdict"
+          },
+          "change_plan": {
+            "type": "string",
+            "title": "Change Plan"
+          },
+          "original_correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Correct"
+          },
+          "original_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "understood",
+                  "misread",
+                  "misconception",
+                  "guessed",
+                  "slip",
+                  "out_of_time",
+                  "not_sure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recheck_id",
+          "student_id",
+          "nickname",
+          "question_id",
+          "transfer_item",
+          "next_step",
+          "created_at",
+          "available_at",
+          "answered_at",
+          "answer",
+          "explanation",
+          "self_confidence",
+          "time_spent_seconds",
+          "is_correct",
+          "reading_label",
+          "reading_source",
+          "misconception_label",
+          "hypotheses",
+          "gap_days",
+          "verdict",
+          "change_plan",
+          "original_correct",
+          "original_label"
+        ],
+        "title": "RecheckView"
+      },
+      "ReplyIn": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply"
+        ],
+        "title": "ReplyIn"
+      },
+      "ReplyOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "done",
+            "title": "Status",
+            "default": "done"
+          }
+        },
+        "type": "object",
+        "title": "ReplyOut"
+      },
+      "ResponseDetail": {
+        "properties": {
+          "response_id": {
+            "type": "integer",
+            "title": "Response Id"
+          },
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "question": {
+            "$ref": "#/components/schemas/QuestionOut"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "self_confidence": {
+            "type": "string",
+            "enum": [
+              "sure",
+              "unsure",
+              "guessed"
+            ],
+            "title": "Self Confidence"
+          },
+          "is_correct": {
+            "type": "boolean",
+            "title": "Is Correct"
+          },
+          "time_spent_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Spent Seconds"
+          },
+          "timed_out": {
+            "type": "boolean",
+            "title": "Timed Out"
+          },
+          "ran_out_of_time": {
+            "type": "boolean",
+            "title": "Ran Out Of Time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "diagnosis": {
+            "$ref": "#/components/schemas/DiagnosisView"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowUpView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceView"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "rechecks": {
+            "items": {
+              "$ref": "#/components/schemas/RecheckView"
+            },
+            "type": "array",
+            "title": "Rechecks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "response_id",
+          "student_id",
+          "nickname",
+          "question",
+          "answer",
+          "explanation",
+          "self_confidence",
+          "is_correct",
+          "time_spent_seconds",
+          "timed_out",
+          "ran_out_of_time",
+          "created_at",
+          "diagnosis",
+          "history",
+          "follow_up",
+          "trace"
+        ],
+        "title": "ResponseDetail"
+      },
+      "ResponseIn": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Explanation",
+            "default": ""
+          },
+          "self_confidence": {
+            "type": "string",
+            "enum": [
+              "sure",
+              "unsure",
+              "guessed"
+            ],
+            "title": "Self Confidence"
+          },
+          "time_spent_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 7200.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Spent Seconds"
+          },
+          "timed_out": {
+            "type": "boolean",
+            "title": "Timed Out",
+            "default": false
+          },
+          "ran_out_of_time": {
+            "type": "boolean",
+            "title": "Ran Out Of Time",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "answer",
+          "self_confidence"
+        ],
+        "title": "ResponseIn"
+      },
+      "ResultsOut": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "total_students": {
+            "type": "integer",
+            "title": "Total Students"
+          },
+          "rule_only_count": {
+            "type": "integer",
+            "title": "Rule Only Count"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionResults"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_id",
+          "total_students",
+          "rule_only_count",
+          "questions"
+        ],
+        "title": "ResultsOut"
+      },
+      "ScheduleRechecksIn": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "student_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Ids"
+          },
+          "delay_days": {
+            "type": "integer",
+            "maximum": 90.0,
+            "minimum": 0.0,
+            "title": "Delay Days",
+            "default": 7
+          },
+          "next_step": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Next Step",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id"
+        ],
+        "title": "ScheduleRechecksIn"
+      },
+      "ScheduleRechecksOut": {
+        "properties": {
+          "scheduled": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduledRecheck"
+            },
+            "type": "array",
+            "title": "Scheduled"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedStudent"
+            },
+            "type": "array",
+            "title": "Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scheduled",
+          "skipped"
+        ],
+        "title": "ScheduleRechecksOut"
+      },
+      "ScheduledRecheck": {
+        "properties": {
+          "recheck_id": {
+            "type": "integer",
+            "title": "Recheck Id"
+          },
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "transfer_item_id": {
+            "type": "integer",
+            "title": "Transfer Item Id"
+          },
+          "change": {
+            "type": "string",
+            "title": "Change"
+          },
+          "available_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available At"
+          },
+          "next_step": {
+            "type": "string",
+            "title": "Next Step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recheck_id",
+          "student_id",
+          "nickname",
+          "transfer_item_id",
+          "change",
+          "available_at",
+          "next_step"
+        ],
+        "title": "ScheduledRecheck"
+      },
+      "ScriptTurn": {
+        "properties": {
+          "teacher_prompt": {
+            "type": "string",
+            "title": "Teacher Prompt"
+          },
+          "anticipated_student_thinking": {
+            "type": "string",
+            "title": "Anticipated Student Thinking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "teacher_prompt",
+          "anticipated_student_thinking"
+        ],
+        "title": "ScriptTurn"
+      },
+      "SkippedStudent": {
+        "properties": {
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "nickname",
+          "reason"
+        ],
+        "title": "SkippedStudent"
+      },
+      "StoryCount": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time",
+              "not_sure"
+            ],
+            "title": "Label"
+          },
+          "misconception_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "misconception_label",
+          "count"
+        ],
+        "title": "StoryCount"
+      },
+      "StudentEntry": {
+        "properties": {
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "response_id": {
+            "type": "integer",
+            "title": "Response Id"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "understood",
+              "misread",
+              "misconception",
+              "guessed",
+              "slip",
+              "out_of_time",
+              "not_sure"
+            ],
+            "title": "Label"
+          },
+          "misconception_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception Label"
+          },
+          "certainty": {
+            "type": "number",
+            "title": "Certainty"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "settled",
+              "not_sure"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "rule",
+              "ai",
+              "both",
+              "teacher"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "nickname",
+          "response_id",
+          "label",
+          "misconception_label",
+          "certainty",
+          "status",
+          "source"
+        ],
+        "title": "StudentEntry"
+      },
+      "StudentOut": {
+        "properties": {
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "quiz": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudentQuizOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answered_question_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answered Question Ids"
+          },
+          "pending_follow_ups": {
+            "items": {
+              "$ref": "#/components/schemas/PendingFollowUpOut"
+            },
+            "type": "array",
+            "title": "Pending Follow Ups"
+          },
+          "rechecks": {
+            "items": {
+              "$ref": "#/components/schemas/StudentRecheckOut"
+            },
+            "type": "array",
+            "title": "Rechecks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "nickname",
+          "class_name",
+          "quiz",
+          "answered_question_ids",
+          "pending_follow_ups"
+        ],
+        "title": "StudentOut"
+      },
+      "StudentQuestionOut": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "time_limit_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "position",
+          "prompt",
+          "answer_type",
+          "choices",
+          "time_limit_seconds"
+        ],
+        "title": "StudentQuestionOut"
+      },
+      "StudentQuizOut": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/StudentQuestionOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "title",
+          "questions"
+        ],
+        "title": "StudentQuizOut"
+      },
+      "StudentRecheckOut": {
+        "properties": {
+          "recheck_id": {
+            "type": "integer",
+            "title": "Recheck Id"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recheck_id",
+          "prompt",
+          "answer_type",
+          "choices"
+        ],
+        "title": "StudentRecheckOut",
+        "description": "A check-in that is open now. Deliberately says nothing about the original question or the change."
+      },
+      "SubmitOut": {
+        "properties": {
+          "response_id": {
+            "type": "integer",
+            "title": "Response Id"
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowUpOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "response_id",
+          "follow_up"
+        ],
+        "title": "SubmitOut"
+      },
+      "TraceView": {
+        "properties": {
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "latency_ms": {
+            "type": "integer",
+            "title": "Latency Ms"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "source",
+          "model",
+          "prompt_version",
+          "latency_ms",
+          "ok",
+          "detail"
+        ],
+        "title": "TraceView"
+      },
+      "TransferItemIn": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "correct_answer": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Correct Answer"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "choices": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Choices"
+          },
+          "change": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt",
+          "correct_answer",
+          "answer_type",
+          "change"
+        ],
+        "title": "TransferItemIn",
+        "description": "The same key idea in a changed situation, used for later re-checks (Riddle 4)."
+      },
+      "TransferItemOut": {
+        "properties": {
+          "transfer_item_id": {
+            "type": "integer",
+            "title": "Transfer Item Id"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "correct_answer": {
+            "type": "string",
+            "title": "Correct Answer"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Answer Type"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "change": {
+            "type": "string",
+            "title": "Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transfer_item_id",
+          "prompt",
+          "correct_answer",
+          "answer_type",
+          "choices",
+          "change"
+        ],
+        "title": "TransferItemOut"
+      },
+      "TransferQuestionReport": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "transfer_item_count": {
+            "type": "integer",
+            "title": "Transfer Item Count"
+          },
+          "scheduled": {
+            "type": "integer",
+            "title": "Scheduled"
+          },
+          "waiting": {
+            "type": "integer",
+            "title": "Waiting"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "better_marks": {
+            "type": "integer",
+            "title": "Better Marks"
+          },
+          "better_understanding": {
+            "type": "integer",
+            "title": "Better Understanding"
+          },
+          "verdicts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Verdicts"
+          },
+          "rechecks": {
+            "items": {
+              "$ref": "#/components/schemas/RecheckView"
+            },
+            "type": "array",
+            "title": "Rechecks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "position",
+          "prompt",
+          "transfer_item_count",
+          "scheduled",
+          "waiting",
+          "answered",
+          "better_marks",
+          "better_understanding",
+          "verdicts",
+          "rechecks"
+        ],
+        "title": "TransferQuestionReport"
+      },
+      "TransferReport": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "lasting_days": {
+            "type": "number",
+            "title": "Lasting Days"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/TransferQuestionReport"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_id",
+          "lasting_days",
+          "questions"
+        ],
+        "title": "TransferReport"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WrongAnswerGroup": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "several_stories": {
+            "type": "boolean",
+            "title": "Several Stories"
+          },
+          "stories": {
+            "items": {
+              "$ref": "#/components/schemas/StoryCount"
+            },
+            "type": "array",
+            "title": "Stories"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/StudentEntry"
+            },
+            "type": "array",
+            "title": "Students"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "count",
+          "several_stories",
+          "stories",
+          "students"
+        ],
+        "title": "WrongAnswerGroup",
+        "description": "Everyone who gave the same wrong answer, and the different stories behind it."
+      }
+    }
+  }
+}

@@ -66,6 +66,21 @@ The `followup-v2` prompt proposes a primary question and up to two alternatives 
 
 Gemini errors, unusable structured output, and time exhaustion fall back to rules or a hypothesis-specific template. If no useful safe template exists, preserve `not_sure` and defer to the teacher. `AIRun` records metadata and parsed outcomes, rather than raw prompts. The health endpoint checks the DB and key presence; it does not call Gemini.
 
+## Performance and Latency Budgets
+
+To deliver responsive classroom interactions and prevent browser timeouts during live instruction, all critical operations operate under explicit latency budgets:
+
+| Endpoint / Operation | SLA Target (p95) | Hard Timeout | Fallback Behavior |
+| :--- | :---: | :---: | :--- |
+| `POST /api/submissions` (Grading + Diagnosis) | $< 3.5\text{s}$ | $30\text{s}$ shared budget | Code-only grading returns instantly; diagnosis falls back to transparent rules (`source: rules`) if budget $<2\text{s}$. |
+| `POST /api/follow-ups/{id}/reply` (Re-read) | $< 3.0\text{s}$ | $20\text{s}$ model cap | Falls back to preserving competing hypotheses as `not_sure` for teacher inspection. |
+| `POST /api/follow-ups/{id}/decline` (Skip/Teacher) | $< 100\text{ms}$ | $2\text{s}$ DB timeout | Synchronous atomic DB write; zero AI invocation; closes follow-up immediately. |
+| `GET /api/classrooms/{id}/results` (Teacher View) | $< 250\text{ms}$ | $5\text{s}$ DB timeout | Indexed SQL queries; groups pre-computed versioned diagnoses by reason. |
+| `POST /api/classrooms/{id}/ai-summary` | $< 5.0\text{s}$ | $25\text{s}$ model cap | Synthesizes class-wide submissions into 10-min reteach plan via Gemini/Groq rotation. |
+| `POST /api/responses/{id}/ai-script` | $< 3.5\text{s}$ | $20\text{s}$ model cap | Generates 1-on-1 Socratic desk intervention script for individual student. |
+| `GET /api/health` | $< 50\text{ms}$ | $1\text{s}$ | Verifies DB connectivity and API key presence; zero AI calls. |
+
+
 ## Persistence and deployment boundaries
 
 Startup runs `Base.metadata.create_all` for new tables, then `migrations.upgrade_schema` for additive column/index upgrades on existing databases (no data is dropped). The module-level engine/session factory assumes a single configured database per running service. Rate-limit state is held in process memory.

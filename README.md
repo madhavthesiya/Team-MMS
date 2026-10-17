@@ -1,10 +1,21 @@
 # BehindTheMark — Same Score, Different Story
 
+[![CI Build](https://img.shields.io/github/actions/workflow/status/madhavthesiya/Team-MMS/tests.yml?branch=main&label=CI%20Build&logo=github)](https://github.com/madhavthesiya/Team-MMS/actions)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](backend/requirements-dev.txt)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](backend/app/main.py)
+[![TypeScript 5.6](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](frontend/package.json)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](frontend/package.json)
+[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&logoColor=white)](docs/openapi.json)
+[![Tests 175 Passed](https://img.shields.io/badge/Tests-175%20Passed-brightgreen)](backend/tests/)
+[![Benchmark 51 Cases](https://img.shields.io/badge/Benchmark-51%20Cases-blue)](eval/cases.jsonl)
+[![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Team MMS:** Madhav Thesiya · Meet Virugama · Shane Christian  
-**Live Application:** https://behindthemark.onrender.com · **Frontend Client:** https://behindthemark.vercel.app  
+**Frontend Client:** https://team-mms.vercel.app/ · **Backend API:** https://team-mms.onrender.com  
+**Interactive API Docs (Swagger):** https://team-mms.onrender.com/docs · **Machine-Readable Spec:** [docs/openapi.json](docs/openapi.json)  
 **Demo Video:** [2-Minute Walkthrough](https://youtu.be/behindthemark-demo) · **Frontend Pack:** [UI Screenshots & Flow Documentation](https://docs.google.com/document/d/behindthemark-pack)  
 
-**Quick Test:** Open the live link → Click **"Try the sample class"** → Open the 6-character join link in an incognito window or on your phone → Submit an answer with your written explanation → Watch the teacher dashboard group students by cognitive reasoning in real time.
+**Quick Test:** Open https://team-mms.vercel.app/ → Click **"Try the sample class"** → Open the 6-character join link in an incognito window or on your phone → Submit an answer with your written explanation → Watch the teacher dashboard group students by cognitive reasoning in real time.
 
 ---
 
@@ -124,22 +135,54 @@ BehindTheMark includes three specialized pedagogical AI tools designed for live 
 
 ## 6. Evaluation Harness & Empirical Validation
 
-To avoid anecdotal validation, BehindTheMark includes an automated evaluation harness:
+To avoid anecdotal validation, BehindTheMark includes an automated evaluation harness and one-click verification:
 
+- **One-Click System Verification Suite:** Run full backend unit/integration tests, frontend production build, benchmark evaluation, and git hygiene scanner in a single command:
+  ```powershell
+  # Windows PowerShell:
+  powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
+
+  # Linux / macOS (Bash):
+  bash scripts/verify.sh
+  ```
 - **Benchmark Dataset (`eval/cases.jsonl`):** 51 curated cases covering arithmetic slips, misconception triggers, inverted misreads, self-reported guesses, and adversarial prompt injections.
 - **Evaluation Runner (`eval/run_eval.py`):** Runs the pipeline offline and generates timestamped reports in `eval/results/` tracking accuracy, not-sure rates, and a full confusion matrix across diagnostic categories.
 - **Continuous Integration:** GitHub Actions runs 175 offline backend tests and frontend Vite builds on every push in under 30 seconds.
 
 ---
 
-## 7. Setup & Reproduction Guide (Clean Clone)
+## 7. Fast Reviewer Testing & Local Setup
 
-### Prerequisites
+### Option A: Interactive Terminal CLI Demo (Fastest — Zero Setup)
+Reviewers and automated evaluators can test the diagnostic pipeline directly from the terminal without launching a web server or browser:
+
+```bash
+# Test Student Asha (Arithmetic slip on 1/2 + 1/4 -> 2/4):
+python backend/app/demo.py --case asha
+
+# Test Student Leo (Lucky guess on 1/2 + 1/4 -> 3/4):
+python backend/app/demo.py --case leo
+
+# Test Systematic Misconception (Added numerators and denominators -> 2/6):
+python backend/app/demo.py --case misconception
+
+# Test Server Timing Invariant (Auto-submitted timeout -> strictly facts):
+python backend/app/demo.py --case timeout
+
+# Custom Interactive Input Prompt:
+python backend/app/demo.py --interactive
+```
+
+---
+
+### Option B: Local Full-Stack Development
+
+#### Prerequisites
 - Python 3.12+
 - Node.js 24+ & npm 11+
 - Docker (optional, for unified containerized deployment)
 
-### 1. Clone & Configure Environment
+#### 1. Clone & Configure Environment
 ```bash
 git clone https://github.com/madhavthesiya/Team-MMS.git
 cd Team-MMS
@@ -149,7 +192,7 @@ cp .env.example .env
 # Optional: supply GROQ_API_KEY (from https://console.groq.com/keys)
 ```
 
-### 2. Backend Setup
+#### 2. Backend Setup
 ```bash
 cd backend
 python -m venv .venv
@@ -168,7 +211,7 @@ python -m pytest -o addopts= -q
 uvicorn app.main:create_app --factory --reload --port 8000
 ```
 
-### 3. Frontend Setup (Separate Terminal)
+#### 3. Frontend Setup (Separate Terminal)
 ```bash
 cd frontend
 npm install
@@ -177,7 +220,7 @@ npm install
 npm run dev
 ```
 
-### 4. Docker Unified Container Run
+#### 4. Docker Unified Container Run
 ```bash
 # Build multi-stage container (Node 24 Alpine build + Python 3.12 slim runtime)
 docker build -t behindthemark .
@@ -208,9 +251,12 @@ docker run -p 8000:8000 --env-file .env behindthemark
 
 ## 10. Documentation Index
 
-- [API Contract](docs/api-contract.md) — Complete endpoint specifications, schemas, and error codes (v1.5).
-- [Architecture Guide](docs/architecture.md) — Domain model map, evidence/versioning model, and concurrency policy.
-- [Security & Student Privacy](SECURITY.md) — Data isolation, COPPA/FERPA adherence, and credential management.
-- [Status & Verification Record](docs/status.md) — Point-in-time verification logs and test execution history.
-- [UI & Accessibility Review](docs/ui-polish.md) — Responsive design standards and accessibility audits.
-- [Design Specification](docs/superpowers/specs/2026-10-16-behindthemark-design.md) — Product requirements and pedagogical motivations.
+- [Architecture Decision Records (ADRs)](docs/adr/README.md) — 6 formal records documenting grading determinism, zero-PII sessions, competing hypotheses, and concurrency guarantees.
+- [OpenAPI 3.1 Specification](docs/openapi.json) — Complete machine-readable HTTP specification (102 KB) exported directly from FastAPI.
+- [API Contract](docs/api-contract.md) — Complete endpoint specifications, request/response schemas, and error codes (v1.5).
+- [Architecture Guide](docs/architecture.md) — Domain model map, evidence/versioning model, concurrency policy, and latency budgets.
+- [Security & Threat Model Matrix](SECURITY.md) — Formal STRIDE matrix, prompt injection defenses, COPPA/FERPA compliance, and access boundaries.
+- [Status & Verification Record](docs/status.md) — Point-in-time verification logs, test execution history, and known capabilities.
+- [UI & Accessibility Review](docs/ui-polish.md) — Responsive design standards, dark mode contrast audits, and accessibility compliance.
+- [Design Specification](docs/superpowers/specs/2026-10-16-behindthemark-design.md) — Product requirements, educational rationale, and pedagogical motivations.
+
