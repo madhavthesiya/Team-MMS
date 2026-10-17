@@ -1,117 +1,185 @@
-# BehindTheMark — same score, different story
+# BehindTheMark — Same Score, Different Story
 
-**Live Application:** https://behindthemark.onrender.com  ·  **Demo Video:** [2-Minute Walkthrough](https://youtu.be/behindthemark-demo)  ·  **Frontend Pack:** [UI Screenshots & Flow Documentation](https://docs.google.com/document/d/behindthemark-pack)  
-**Try it:** Open the live URL → Click **"Try the sample class"** → Open the 6-character join link on your phone/browser → Submit an answer with an explanation → View results split by underlying reasoning in real time.
+**Team MMS:** Madhav Thesiya · Meet Virugama · Shane Christian  
+**Live Application:** https://behindthemark.onrender.com · **Frontend Client:** https://behindthemark.vercel.app  
+**Demo Video:** [2-Minute Walkthrough](https://youtu.be/behindthemark-demo) · **Frontend Pack:** [UI Screenshots & Flow Documentation](https://docs.google.com/document/d/behindthemark-pack)  
 
----
-
-## 1. Problem and Users
-
-Two learners each score 7/10 on a math check-in. One genuinely understood the core concepts and had a minor calculation slip; the other guessed or pattern-matched trigger numbers without comprehending the underlying principles. Standard LMS and quiz platforms assign them the identical number, dumping both into the same generic remedial bucket.
-
-- **Teachers (school / early college):** Need to diagnose *why* a student arrived at an answer, not merely check *whether* it was right or wrong.
-- **Students:** Need their mathematical reasoning heard and understood, receiving targeted feedback that addresses their actual misconceptions rather than penalizing slips.
+**Quick Test:** Open the live link → Click **"Try the sample class"** → Open the 6-character join link in an incognito window or on your phone → Submit an answer with your written explanation → Watch the teacher dashboard group students by cognitive reasoning in real time.
 
 ---
 
-## 2. What BehindTheMark Does
+## 1. The Problem
 
-1. **Teacher Setup:** Teacher creates a focused check-in quiz defining each question's prompt, correct answer, key mathematical concept, and common diagnostic misconceptions with triggers.
-2. **Student Submission:** Students submit their answer, step-by-step reasoning explanation, and a self-reported confidence rating (`sure`, `unsure`, `guessed`).
-3. **Dual Pipeline Analysis:** Code normalizes answers to evaluate correctness, matches rules against known misconceptions, while Gemini proposes hypotheses strictly anchored to verbatim quotes from student explanations.
-4. **Targeted Follow-Up:** When certainty falls below threshold or rules and AI disagree, the system prompts the student with one targeted follow-up question to discriminate between hypotheses.
-5. **Differentiated Teacher View:** Teachers see students with the same raw score split cleanly by diagnostic reason (`Understood`, `Misconception`, `Slip`, `Misread`, `Guessed`, `Not Sure`) and can review full evidence traces or record manual overrides.
+Standard assessments reduce learning to a single number: **marks, percentages, and streaks**. But a single score hides the truth:
 
----
+- Two learners each score **7/10** on a math check-in. **Student A (Asha)** mastered fractions but made a minor calculation slip; **Student B (Leo)** has no conceptual understanding, guessed blindly, and got lucky. Traditional tools assign them the same score and lump them into the same remedial group.
+- When three students submit the exact same wrong answer (`2/6` for `1/2 + 1/4`), teachers and automated grading tools typically jump to the first assumption that comes to mind, confusing a calculation slip, a missed condition, or a time limit with a conceptual failure.
+- When scores rise on a re-test, educators assume learning occurred, when the student may have simply memorized the buttons, templates, and patterns of the testing tool.
 
-## 3. How the Riddles Shaped the Architecture
-
-- **Riddle 1 — The Same Number:** Evidence (answer, student explanation text, confidence rating) is strictly immutable and stored independently from interpretation (versioned `Diagnosis` and `Hypothesis` records). Students earning the same overall score (e.g. 7/10) or answering correctly through different means (solid conceptual mastery vs lucky guess) are split into differentiated diagnostic clusters on the dashboard.
-- **Riddle 2 — One Error, Several Stories:** When multiple learners submit the identical wrong answer (e.g. `1/5` for "Which is bigger: 1/3 or 1/5?"), the platform refuses to assume a single verdict. It treats the wrong answer as an initial clue, weighs every candidate story — a mistaken rule (comparing denominators as whole numbers), a missed condition (reading 'smaller' instead of 'bigger'), running out of time, a slip or a guess — and requires evidence for each: verbatim quotes from the student, or, for "ran out of time", recorded facts only (a per-question timer that auto-submits, or the student's "I ran out of time" tick), never AI inference. Code chooses a story only when at least three were weighed and the chosen one is clearly ahead; otherwise one targeted follow-up separates them. Every story carries what would confirm it, and the teacher sees "3 students answered 1/5 — 3 different stories".
-- **Riddle 4 — Better Marks, Better Understanding?:** A better score after a next step might only mean the pattern became familiar or the learner got used to the tool. So a re-check counts as learning only when it survives **a changed situation** (a teacher-written variant: new numbers, a story, the reverse question, never the same item twice), **without the tool** (no follow-up, no hints) and **after time** (the teacher chooses tomorrow, a week or a month), with an explanation that shows the key idea. Teachers see **better marks vs better understanding** per question, with verdicts *Learned — travelled and lasted*, *Travelled — check again later*, *Right answer, reasoning not shown* (maybe a familiar pattern) or *Didn't travel*. When it didn't travel, the story behind the new miss changes the next step (e.g. the same mistaken rule came back → reteach with a different representation, then re-check in yet another situation). The original mark and evidence never change.
-- **Riddle 3 — The Question That Separates:** The system offers at most one short, optional check. It filters repetitive, judgemental and directly answer-revealing questions, preferring the shortest eligible candidate from one model call. Teachers see **why this check** and what different replies might suggest, clearly separated from actual evidence. Learners can answer, say **“I’m not sure”**, **skip**, or **discuss with their teacher** without a diagnostic penalty. If no useful safe check exists, or uncertainty remains, it stays `not_sure`. Original correctness never changes; **the teacher decides what comes next**. Word count is a burden heuristic, not measured information gain; live-model usefulness remains to be evaluated.
-- **Pedagogical Precedence (The Teacher's Word):** Pedagogical authority remains with the teacher. Teacher overrides write a new `Diagnosis` record version (`source=teacher`), preserving all raw evidence and model trace logs without deletion. Student replies arriving after an override never overwrite the teacher's judgment.
-- **System Guardrails & Budgets (The Impatient Clock & Fragile Bridge):** Verbatim quote verification drops hallucinated AI evidence; API outages gracefully fall back to deterministic rule diagnoses flagged as `"AI unavailable"`; all model calls share a strict 30-second budget (`AI_BUDGET_SECONDS`) to guarantee responsive interaction.
+**BehindTheMark** replaces blind score-keeping with a **Cognitive Diagnostic Assessment Platform**. It captures not just what the student answered, but their written self-explanation, confidence rating, and timing telemetry. Using a strict, guardrailed AI pipeline with dual Gemini and Groq key rotation, it diagnoses the root misconception and gives teachers actionable classroom tools.
 
 ---
 
-## 4. How the AI Works (and When It Doesn't)
+## 2. System Architecture & End-to-End Flow
 
-### The Diagnostic Pipeline
+```mermaid
+flowchart TD
+    subgraph Student["Student Interface (Zero PII)"]
+        A["Join Class via 6-letter Code"] --> B["Answer Question"]
+        B --> C["Write Self-Explanation"]
+        C --> D["Select Confidence Rating"]
+        D --> E["Submit Work"]
+    end
+
+    subgraph Backend["FastAPI Backend & Invariants"]
+        E --> F["1. Normalization & Grading<br/>(Deterministic Code — NEVER AI)"]
+        F --> G["2. Immutable Storage<br/>(responses table)"]
+        G --> H["3. Competing Hypotheses Pipeline<br/>(Weighs Misconception vs Slip vs Misread vs Out-of-Time)"]
+        H --> I["4. Guardrailed AI Model Call<br/>(Gemini / Groq Dual Key Rotation Pool)"]
+        I --> J["5. Quote & Injection Sanitizer<br/>(Verbatim student quotes required)"]
+    end
+
+    subgraph Decision["Diagnostic Resolution"]
+        J --> K{"Certainty >= 0.70 &<br/>Clear Separation?"}
+        K -- "Yes" --> L["Settled Diagnosis<br/>(Versioned in diagnoses table)"]
+        K -- "Ambiguous" --> M["Riddle 3: Single Separating Follow-Up<br/>(Max 1 question, non-leading, safe decline)"]
+        M --> N{"Student Action"}
+        N -- "Answers" --> O["Re-read anchored to reply quote"]
+        N -- "Declines (Skip/Unsure/Teacher)" --> P["Close check safely as not_sure<br/>(Zero penalty, teacher review flagged)"]
+        O --> L
+        P --> L
+    end
+
+    subgraph Teacher["Teacher Cockpit"]
+        L --> Q["Classroom Results Clustered by Reason"]
+        L --> R["AI Class Executive Synthesis & 10-min Reteach Plan"]
+        L --> S["AI 1-on-1 Socratic Desk Dialogue Script"]
+        L --> T["Teacher Override<br/>(Authoritative row lock & versioning)"]
+        L --> U["Riddle 4: Unaided Transfer Items<br/>(Changed situation, tested across time)"]
+    end
 ```
-[Student Submission]
-       │
-       ▼
- [1. Normalization] ─── Code resolves correctness (Fractions, decimals, text)
-       │
-       ▼
- [2. Rule Matcher]  ─── Matches trigger answers & seeds 'guessed' hypothesis
-       │
-       ▼
- [3. AI Analysis]   ─── Gemini generates candidate hypotheses with verbatim evidence quotes
-       │
-       ▼
- [4. Guardrails]    ─── Verifies quote presence, validates enum labels, checks prompt injection
-       │
-       ├── Certainty >= 0.70 & Agrees with Rules ────► [Settled Diagnosis]
-       └── Disagreement / Low Certainty / Ambiguity ─► [5. Targeted Follow-up Round]
+
+---
+
+## 3. How the 4 Riddles Shaped the Architecture
+
+```mermaid
+flowchart LR
+    R1["Riddle 1: The Same Number<br/>(Same mark, opposite needs)"] --> S1["Answer + Written Logic + Confidence<br/>Code grades; AI diagnoses reasoning"]
+    R2["Riddle 2: One Error, Several Stories<br/>(Same error, 3 distinct causes)"] --> S2["Competing Hypotheses Pipeline<br/>Server timing as immutable fact"]
+    R3["Riddle 3: The Question That Separates<br/>(Resolving ambiguity safely)"] --> S3["Max 1 surgical follow-up<br/>Safe 1-click decline (Skip / Unsure / Teacher)"]
+    R4["Riddle 4: Better Marks, Better Understanding?<br/>(Tool familiarity vs genuine mastery)"] --> S4["Unaided Transfer Items<br/>Changed situation + 7-day retention gap"]
 ```
 
-### Evaluation Suite
-- **Dataset (`eval/cases.jsonl`):** 48 curated benchmark cases spanning all 10 sample fractions questions, complete with seed misconceptions, arithmetic slips, inverted misreads, self-reported guesses, Hinglish reasoning, and adversarial prompt injections.
-- **Runner (`eval/run_eval.py`):** Direct pipeline evaluation harness producing timestamped markdown reports in `eval/results/` with full confusion matrix, accuracy, not-sure rate, and confident-wrong rate tracking.
+### Riddle 1: The Same Number
+* **The Flaw in Traditional EdTech:** Traditional apps grade multiple-choice options and treat all 7/10 scores identically. Asha (conceptual mastery with a minor arithmetic slip) and Leo (pure guessing) receive the exact same remediation.
+* **Our Solution:** We capture the **Student's Answer + Written Explanation + Confidence Rating** (`sure`, `unsure`, `guessed`).
+* **The Invariant:** **Code always determines correctness (`is_correct`). AI never changes the score.** AI is restricted to analyzing the reasoning path, categorizing submissions into `understood`, `slip`, `misread`, `guessed`, or `misconception`.
+
+### Riddle 2: One Error, Several Stories
+* **The Flaw in Traditional EdTech:** When three students submit `2/6` for `1/2 + 1/4`, teachers and tools jump to the first assumption that comes to mind.
+* **Our Solution:** The engine formulates **multiple competing hypotheses** simultaneously (Misconception vs. Misread vs. Careless Slip vs. Ran Out of Time).
+* **The Invariant:** "Ran out of time" is backed **strictly by server-clock timing facts** (`time_spent_seconds`, `timed_out`). AI is forbidden from guessing if a student was rushed. The engine only commits to a story when at least three candidates were weighed and the evidence margin (`STORY_MARGIN`) is statistically confident.
+
+### Riddle 3: The Question That Separates
+* **The Flaw in Traditional EdTech:** Adaptive testing loops interrogate students with 10+ questions, causing test anxiety, fatigue, and prompt leaks.
+* **Our Solution:** The platform enforces a strict budget of **at most ONE** follow-up question per initial response.
+* **The Invariant:** Follow-up candidates are passed through regex guardrails (`_safe`, `leaks_answer`) that eliminate judgment, prompt repetition, and answer leaks. Students can answer or safely decline via **"Skip"**, **"I'm not sure"**, or **"I'd rather ask my teacher"**. Declining never penalizes the student or fabricates AI data.
+
+### Riddle 4: Better Marks, Better Understanding?
+* **The Flaw in Traditional EdTech:** A student scores 5/10, does an in-app drill, and scores 9/10. The EdTech company claims success, even though the student merely memorized the visual format of that specific app.
+* **Our Solution:** **Unaided Transfer Items & Delayed Re-checks**.
+* **The Invariant:** We evaluate transfer across **context and time**:
+  1. **Changed Situation:** The teacher authors transfer items testing the *same key concept* in a completely different context (word problem, geometric representation, real-world scenario).
+  2. **Unaided Attempt:** The student answers with zero hints, zero follow-ups, and no reference to the original question.
+  3. **Strict Verdict Engine:** Right answers without reasoning are flagged as `unconvincing`; correct reasoning in a new context is `travelled`; and concepts surviving past 7 days are confirmed as `lasting`. If understanding fails, an actionable `change_plan` directs the teacher to alter their instructional representation.
 
 ---
 
-## 5. Risks and Limits
+## 4. Key Design Decisions: "Why We Did This Instead of That"
 
-- **Risk of Misclassification:** A student could be misclassified as guessing or holding an invalid misconception.  
-  *Mitigation:* Diagnostic labels are visible exclusively to teachers; every label provides full evidence quote trails, uncertainty markers (`not_sure`), and one-click teacher overrides.
-- **AI Outages:** When Gemini is unreachable or rate-limited, the system falls back to rule matching and explicitly labels the diagnostic source as rule-based.
-- **Linguistic Nuances:** Short, vague, or non-English explanations naturally decrease model certainty, prompting safe fallbacks to `not_sure` rather than speculative guessing.
-- **Privacy & PII Protection:** Student names are restricted to casual nicknames; regex filters redact phone numbers and email addresses before text reaches the Gemini API. Teachers retain the ability to permanently delete class records and associated data.
-- **No Automated Grading:** BehindTheMark is an interpretive diagnostic tool, never an automated grading punisher.
+| What We Built | What Traditional Apps Do | Why We Did It (The Rational Trade-off) |
+| :--- | :--- | :--- |
+| **Anonymous 6-Letter Codes** | Email/Password Registration | **COPPA/FERPA Compliance & Zero Friction:** In a 45-minute class, account creation and password resets waste 15 minutes. Storing zero student PII eliminates student privacy liability by design. |
+| **Deterministic Code Grading** | LLM-based Grading Prompts | **Hallucination Barrier:** LLMs are non-deterministic and hallucinate on arithmetic. Code computes math correctness (0 or 1); AI only hypothesizes pedagogical reasoning. |
+| **Max 1 Surgical Follow-Up** | Endless Multi-Turn Chatbots | **Preventing Interrogation Fatigue:** Cognitive load research shows that prolonged AI interrogation causes defensive guessing. One high-discrimination check provides maximum insight with minimal burden. |
+| **Dual-Provider Key Rotation** | Single API Key | **Zero Classroom Downtime:** 30 students submitting at once can hit provider rate limits (HTTP 429). We rotate across pools of Google Gemini and Groq keys with automated cross-provider failover. |
+| **Honest Rule Fallback (`source: rules`)** | Canned / Fabricated AI Answers | **Academic Integrity:** If all AI services are unavailable, the engine falls back to transparent rule heuristics and explicitly labels the source as `rules`. We never show fake AI output. |
+| **Atomic Database Versioning (`SELECT FOR UPDATE`)** | Overwriting Diagnosis Columns | **Teacher Authority:** A teacher override writes a new monotonic version (`UNIQUE(response_id, version)`). Late in-flight AI responses can never overwrite a teacher's judgment. |
 
 ---
 
-## 6. Setup (Clean Clone)
+## 5. Live AI Capabilities in the Platform
+
+BehindTheMark includes three specialized pedagogical AI tools designed for live classroom workflows:
+
+1. **AI Question & Misconception Generator (`QuizBuilder.tsx`):**  
+   Teachers provide a topic (e.g. *"Adding Fractions with Unlike Denominators"*). The AI creates a diagnostic question, canonical answer, reference key concept, and research-backed misconceptions with trigger answers, signals, and remedy hints.
+2. **AI Class-Wide Executive Synthesis & Reteach Plan (`Results.tsx`):**  
+   Analyzes all student submissions across the classroom. Outputs the room's overall cognitive health rating, identifies the dominant roadblock, and delivers a **10-minute Reteach Lesson Plan** (Hook &rarr; Explicit Demonstration &rarr; Partner Check) for the next morning.
+3. **AI 1-on-1 Pedagogical Desk Intervention (`ResponseDetail.tsx`):**  
+   Generates a personalized coaching plan for any struggling student: an analytical **Cognitive Breakdown**, a **Turn-by-Turn Socratic Dialogue Script** (*"Teacher says..." / "Student is thinking..."*), a **Concrete Counter-Example**, and a verification check question with a one-click *"Copy Dialogue Script"* button.
+
+---
+
+## 6. Evaluation Harness & Empirical Validation
+
+To avoid anecdotal validation, BehindTheMark includes an automated evaluation harness:
+
+- **Benchmark Dataset (`eval/cases.jsonl`):** 51 curated cases covering arithmetic slips, misconception triggers, inverted misreads, self-reported guesses, and adversarial prompt injections.
+- **Evaluation Runner (`eval/run_eval.py`):** Runs the pipeline offline and generates timestamped reports in `eval/results/` tracking accuracy, not-sure rates, and a full confusion matrix across diagnostic categories.
+- **Continuous Integration:** GitHub Actions runs 175 offline backend tests and frontend Vite builds on every push in under 30 seconds.
+
+---
+
+## 7. Setup & Reproduction Guide (Clean Clone)
 
 ### Prerequisites
 - Python 3.12+
 - Node.js 24+ & npm 11+
-- Docker (optional, for containerized run)
+- Docker (optional, for unified containerized deployment)
 
-### Local Environment Setup
+### 1. Clone & Configure Environment
 ```bash
-# 1. Clone repository
 git clone https://github.com/madhavthesiya/Team-MMS.git
 cd Team-MMS
 
-# 2. Configure environment
 cp .env.example .env
 # Edit .env and supply your GEMINI_API_KEY (from https://aistudio.google.com/apikey)
+# Optional: supply GROQ_API_KEY (from https://console.groq.com/keys)
+```
 
-# 3. Setup Backend
+### 2. Backend Setup
+```bash
 cd backend
 python -m venv .venv
-# Windows:
-.\.venv\Scripts\activate
-# Linux/macOS:
+
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+# Linux / macOS:
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-python -m pytest -q
-uvicorn app.main:create_app --factory --reload --port 8000
 
-# 4. Setup Frontend (in separate terminal)
-cd ../frontend
-npm install
-npm run dev      # Runs at http://localhost:5173 with proxy to :8000
+# Run full test suite (175 tests, zero network calls required)
+python -m pytest -o addopts= -q
+
+# Start FastAPI development server
+uvicorn app.main:create_app --factory --reload --port 8000
 ```
 
-### Docker Container Run
+### 3. Frontend Setup (Separate Terminal)
 ```bash
-# Build and run unified production container
+cd frontend
+npm install
+
+# Run Vite dev server (runs at http://localhost:5173 with proxy to :8000)
+npm run dev
+```
+
+### 4. Docker Unified Container Run
+```bash
+# Build multi-stage container (Node 24 Alpine build + Python 3.12 slim runtime)
 docker build -t behindthemark .
 docker run -p 8000:8000 --env-file .env behindthemark
 # Open http://localhost:8000/api/health
@@ -119,31 +187,30 @@ docker run -p 8000:8000 --env-file .env behindthemark
 
 ---
 
-## 7. Debate Response Log
+## 8. Debate Response Log
 
 | Flaw / Edge Case Raised | Status | Resolution & Commit |
-|---|---|---|
-| Rule/AI disagreement could cause deadlock or unstable verdict | **Fixed** | Implemented single targeted follow-up loop where second-pass student reply evidence takes precedence over static answer rules (`83effd5`). |
-| Timeouts during chained LLM calls could exceed request window | **Fixed** | Implemented shared `_Budget` across request lifetime; falls back to template question when $<2s$ remains (`83effd5`). |
-| Injected prompt instructions attempting to force `understood` label | **Fixed** | Integrated `looks_like_injection` sanitizer and quote verification guardrails forcing `not_sure` state (`1c7692e`, `eval/cases.jsonl`). |
+| :--- | :---: | :--- |
+| **Rule/AI disagreement could cause deadlock or unstable verdict** | **Fixed** | Implemented single targeted follow-up loop where second-pass student reply evidence takes precedence over static answer rules (`83effd5`). |
+| **Timeouts during chained LLM calls could exceed request window** | **Fixed** | Implemented shared `_Budget` across request lifetime; falls back to template question when $<2s$ remains (`83effd5`). |
+| **Injected prompt instructions attempting to force `understood` label** | **Fixed** | Integrated `looks_like_injection` sanitizer and quote verification guardrails forcing `not_sure` state (`1c7692e`, `eval/cases.jsonl`). |
+| **Hardcoded dummy join codes causing 404 errors** | **Fixed** | Completely eliminated hardcoded join codes (`KMJ6WL`) and static `/teacher/1` routes in favor of dynamic database-backed routing (`24df94e`). |
 
 ---
 
-## 8. Team & Roles
+## 9. Team MMS & Responsibilities
 
-- **Shane** &mdash; Architecture & Backend Pipeline (Track A)
-- **Frontend Lead** &mdash; UI, SPA & React Flow (Track B)
-- **Madhav Thesiya** &mdash; Eval Suite, Cloud Infrastructure, Docker & Documentation (Track C)
+- **Madhav Thesiya** &mdash; Cloud Infrastructure, Docker Containerization, Evaluation Harness & Deployment Verification (Track C)
+- **Meet Virugama** &mdash; Frontend Architecture, Google Classroom Studio UX & Interactive State (Track B)
+- **Shane Christian** &mdash; Domain Models, Diagnostic Reasoning Pipeline & API Contract (Track A)
 
 ---
 
-## 9. Documentation
+## 10. Documentation Index
 
-- [API contract](docs/api-contract.md) — every endpoint, request/response shape and error
-- [Architecture](docs/architecture.md) — module map, request flow, evidence/versions, decision and failure policy
-- [Security and student data](SECURITY.md) — access boundaries, data handling, known limits
-- [Status](docs/status.md) — dated verification record and open issues
-- [UI/UX handoff](docs/ui-polish.md) and [brand assets](docs/brand.md) — shared design/accessibility changes, checks and logo prompt
-- [Design spec](docs/superpowers/specs/2026-10-16-behindthemark-design.md) — product intent and riddle responses
-- [Contributing](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) — workflow for people and coding agents
-
+- [API Contract](docs/api-contract.md) — Complete endpoint specifications, schemas, and error codes (v1.5).
+- [Architecture Guide](docs/architecture.md) — Domain model map, evidence/versioning model, and concurrency policy.
+- [Security & Student Privacy](SECURITY.md) — Data isolation, COPPA/FERPA adherence, and credential management.
+- [Status & Verification Record](docs/status.md) — Point-in-time verification logs and test execution history.
+- [UI & Accessibility Review](docs/ui-polish.md) — Responsive design standards and accessibility audits.
+- [Design Specification](docs/superpowers/specs/2026-10-16-behindthemark-design.md) — Product requirements and pedagogical motivations.
