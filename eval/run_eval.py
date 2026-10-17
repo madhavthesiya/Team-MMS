@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from app.ai.client import build_ai_client  # noqa: E402
+from app.ai.client import NullAIClient, build_ai_client  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.domain import StudentWork  # noqa: E402
 from app.services.pipeline import run_diagnosis  # noqa: E402
@@ -44,7 +44,7 @@ def main() -> None:
             "(To evaluate the rule-engine fallback baseline without an API key, pass --rule-only)"
         )
     delay = float(os.environ.get("EVAL_DELAY_SECONDS", "4" if not rule_only_flag else "0"))
-    ai = build_ai_client(settings)
+    ai = NullAIClient() if rule_only_flag else build_ai_client(settings)
     specs = build_specs()
     lines = (ROOT / "eval" / "cases.jsonl").read_text(encoding="utf-8").splitlines()
     cases = [json.loads(line) for line in lines if line.strip()]

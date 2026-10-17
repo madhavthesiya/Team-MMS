@@ -70,7 +70,7 @@ Upgrade path verified on SQLite only; run it once against the hosted Postgres be
 
 - `followup-v2` candidate quality and non-leading language have not been assessed against live Gemini. Word count and pattern filters are heuristics, not measured information gain or semantic guarantees.
 - New schema defaults, learner choices and write interleavings were checked on SQLite only; hosted Postgres still needs verification.
-- Earlier review findings remain outside this Riddle 3 change: eval `--rule-only` still selects the configured AI client when a key exists; resume lacks a processing lease and can race an in-flight reread; a failed version-index upgrade is logged rather than preventing startup. Resolve these before relying on live evaluation or concurrent production use.
+- Earlier review findings: eval `--rule-only` now uses `NullAIClient()` even when a key is present (fixed in `eval/run_eval.py`); resume lacks a processing lease and can race an in-flight reread; a failed version-index upgrade is logged rather than preventing startup. Resolve these before relying on live evaluation or concurrent production use.
 - README deployment/video/pack links have not been verified in this pass. Do not treat them as confirmed artifacts.
 
 ### Reproduce the targeted browser check
